@@ -1,0 +1,165 @@
+'use client'
+
+import { useState } from 'react'
+import { FaEdit, FaTrash, FaPaperPlane } from 'react-icons/fa'
+import { Message } from '@/types/message'
+
+interface MessageListProps {
+  messages: Message[]
+  onEditMessage: (message: Message) => void
+  onDeleteMessage: (id: string) => void
+  onSendMessage: (id: string) => void
+  onSendAll: () => void
+  onImportMessages: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onExportMessages: () => void
+}
+
+export default function MessageList({
+  messages,
+  onEditMessage,
+  onDeleteMessage,
+  onSendMessage,
+  onSendAll,
+  onImportMessages,
+  onExportMessages
+}: MessageListProps) {
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  
+  // Toggle selection of a message
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id)
+        ? prev.filter(item => item !== id)
+        : [...prev, id]
+    )
+  }
+  
+  // Toggle selection of all messages
+  const toggleSelectAll = () => {
+    if (selectedIds.length === messages.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(messages.map(msg => msg.id))
+    }
+  }
+  
+  // Format datetime for display
+  const formatDateTime = (dateTimeStr: string) => {
+    const date = new Date(dateTimeStr)
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    })
+  }
+  
+  // Get status badge class
+  const getStatusBadgeClass = (status: string) => {
+    switch(status) {
+      case 'sent':
+        return 'message-status message-status-sent'
+      case 'failed':
+        return 'message-status message-status-failed'
+      default:
+        return 'message-status message-status-pending'
+    }
+  }
+  
+  // Get status text
+  const getStatusText = (status: string) => {
+    switch(status) {
+      case 'sent':
+        return '已发送'
+      case 'failed':
+        return '失败'
+      default:
+        return '待发送'
+    }
+  }
+
+  return (
+    <div>
+      {messages.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-2 py-1 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.length === messages.length && messages.length > 0}
+                    onChange={toggleSelectAll}
+                    className="rounded h-3 w-3"
+                  />
+                </th>
+                <th className="px-2 py-1 text-left">发送者</th>
+                <th className="px-2 py-1 text-left">接收者</th>
+                <th className="px-2 py-1 text-left">时间</th>
+                <th className="px-2 py-1 text-left">内容</th>
+                <th className="px-2 py-1 text-left">状态</th>
+                <th className="px-2 py-1 text-left">操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {messages.map(message => (
+                <tr key={message.id} className="hover:bg-gray-50">
+                  <td className="px-2 py-1">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(message.id)}
+                      onChange={() => toggleSelection(message.id)}
+                      className="rounded h-3 w-3"
+                    />
+                  </td>
+                  <td className="px-2 py-1">{message.sender}</td>
+                  <td className="px-2 py-1">{message.receiver}</td>
+                  <td className="px-2 py-1 whitespace-nowrap">{formatDateTime(message.time)}</td>
+                  <td className="px-2 py-1 max-w-[180px] truncate">{message.content}</td>
+                  <td className="px-2 py-1">
+                    <span className={getStatusBadgeClass(message.status)}>
+                      {getStatusText(message.status)}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1">
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => onEditMessage(message)}
+                        className="text-blue-600 hover:text-blue-800"
+                        title="编辑"
+                        disabled={message.status === 'sent'}
+                      >
+                        <FaEdit size={10} />
+                      </button>
+                      <button
+                        onClick={() => onDeleteMessage(message.id)}
+                        className="text-red-600 hover:text-red-800"
+                        title="删除"
+                      >
+                        <FaTrash size={10} />
+                      </button>
+                      <button
+                        onClick={() => onSendMessage(message.id)}
+                        className="text-green-600 hover:text-green-800"
+                        title="发送"
+                        disabled={message.status === 'sent'}
+                      >
+                        <FaPaperPlane size={10} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="py-4 text-center text-gray-500 text-sm">
+          消息列表为空，请添加消息
+        </div>
+      )}
+    </div>
+  )
+}
