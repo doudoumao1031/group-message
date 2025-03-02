@@ -15,6 +15,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const isDevelopment = process.env.NODE_ENV === 'development'
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,6 +56,19 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">登录系统</h2>
+        
+        {isDevelopment && (
+          <div className="bg-yellow-100 text-yellow-800 p-3 rounded mb-4 text-center">
+            <p className="mb-2">开发环境模式</p>
+            <button 
+              onClick={onLoginSuccess}
+              className="btn btn-warning w-full"
+            >
+              <FaSignInAlt className="mr-2" />
+              跳过登录
+            </button>
+          </div>
+        )}
         
         {error && (
           <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-center">

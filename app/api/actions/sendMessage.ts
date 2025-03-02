@@ -3,11 +3,6 @@
 import { Message } from '@/types/message'
 import { encryptMsg } from '@/util/crypto'
 
-// Convert datetime to Unix timestamp
-const getUnixTimestamp = (dateTimeStr: string) => {
-  return Math.floor(new Date(dateTimeStr).getTime() / 1000)
-}
-
 // Logger function that works in all environments
 const logger = {
   info: (message: string, data?: any) => {
@@ -45,22 +40,19 @@ export async function sendMessage(message: Message): Promise<boolean> {
     
     const apiUrl = 'https://api.rct2008.com:8443/10450935:3jZ73ZfO8Zgj85AAS9VzU5WP/sendTextMessage'
     
-    // Prepare message data
-    const unixTimestamp = getUnixTimestamp(message.time)
-    
     // Get current date in ISO format for curdate field
     const currentDate = new Date().toISOString()
     
     // Generate a file message ID
     const fileMsgId = `0`
     
-    const messageText = `#sendmessage\ncurdate:${currentDate}\nfrom:${message.sender}\nto:${message.receiver}\ndateunix:${unixTimestamp}\nfilemsgid:${fileMsgId}\nmsg:${message.content}`
+    const messageText = `#sendmessage\ncurdate:${currentDate}\nfrom:${message.sender}\nto:${message.receiver}\ndateunix:${message.unixTimestamp}\nfilemsgid:${fileMsgId}\nmsg:${message.content}`
     
     // Encrypt the message text
     const encryptedMessageText = encryptMsg(messageText)
     
     logger.info(`[${requestId}] Prepared message payload`, { 
-      unixTimestamp,
+      unixTimestamp: message.unixTimestamp,
       messageText,
       encryptedMessageText,
       contentLength: message.content.length

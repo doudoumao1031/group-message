@@ -87,7 +87,8 @@ const ConfirmModal = ({ type, message, itemCount, onConfirm, onCancel }: Confirm
 };
 
 export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  // Automatically set isLoggedIn to true in development mode
+  const [isLoggedIn, setIsLoggedIn] = useState(process.env.NODE_ENV === 'development' ? true : false)
   const [messages, setMessages] = useState<Message[]>([])
   const [editMessage, setEditMessage] = useState<Message | null>(null)
   const [isSending, setIsSending] = useState(false)
@@ -109,9 +110,15 @@ export default function Home() {
   
   // Check login status on mount
   useEffect(() => {
-    const loginStatus = sessionStorage.getItem('isLoggedIn')
-    if (loginStatus === 'true') {
+    // In development mode, always set isLoggedIn to true
+    if (process.env.NODE_ENV === 'development') {
       setIsLoggedIn(true)
+      sessionStorage.setItem('isLoggedIn', 'true')
+    } else {
+      const loginStatus = sessionStorage.getItem('isLoggedIn')
+      if (loginStatus === 'true') {
+        setIsLoggedIn(true)
+      }
     }
     
     // Load messages from localStorage
@@ -405,7 +412,14 @@ export default function Home() {
       ) : (
         <div className="container mx-auto px-2 py-3 max-w-5xl">
           <div className="flex justify-between items-center mb-2">
-            <h1 className="text-xl font-bold text-gray-800">消息发送系统</h1>
+            <div className="flex items-center">
+              <h1 className="text-xl font-bold text-gray-800">消息发送系统</h1>
+              {process.env.NODE_ENV === 'development' && (
+                <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                  开发环境
+                </span>
+              )}
+            </div>
             
             <button
               onClick={handleLogout}

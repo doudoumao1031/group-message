@@ -3,6 +3,7 @@ export interface Message {
   sender: string
   receiver: string
   time: string
+  unixTimestamp: number
   content: string
   status: 'pending' | 'sent' | 'failed'
 }

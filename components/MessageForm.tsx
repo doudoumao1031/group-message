@@ -49,12 +49,16 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
       return
     }
     
+    // Calculate Unix timestamp on client side
+    const unixTimestamp = Math.floor(new Date(time).getTime() / 1000)
+    
     // Create message object
     const message: Message = {
       id: editMessage?.id || Date.now().toString(),
       sender,
       receiver,
       time,
+      unixTimestamp,
       content,
       status: 'pending'
     }
@@ -99,6 +103,14 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
         </div>
         
         <div className="flex items-center">
+          <button
+            type="button"
+            onClick={handleSwapSenderReceiver}
+            className="btn btn-sm btn-outline-secondary mr-2"
+            title="交换发送者/接收者"
+          >
+            <FaExchangeAlt size={14} />
+          </button>
           <label htmlFor="receiver-desktop" className="w-16 text-sm font-medium text-gray-700">接收者:</label>
           <input
             type="text"
@@ -109,17 +121,6 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
             required
           />
         </div>
-      </div>
-      
-      <div className="hidden md:flex md:justify-end">
-        <button
-          type="button"
-          onClick={handleSwapSenderReceiver}
-          className="btn btn-sm btn-outline-secondary"
-        >
-          <FaExchangeAlt size={12} className="mr-1" />
-          交换发送者/接收者
-        </button>
       </div>
       
       <div className="hidden md:flex md:items-center">
@@ -159,6 +160,17 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
           />
         </div>
         
+        <div className="flex items-center justify-center my-1">
+          <button
+            type="button"
+            onClick={handleSwapSenderReceiver}
+            className="btn btn-sm btn-outline-secondary"
+            title="交换发送者/接收者"
+          >
+            <FaExchangeAlt size={14} className="mx-1" />
+          </button>
+        </div>
+        
         <div className="form-group">
           <label htmlFor="receiver-mobile" className="block text-xs font-medium text-gray-700 mb-1">接收者:</label>
           <input
@@ -169,17 +181,6 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
             onChange={(e) => setReceiver(e.target.value)}
             required
           />
-        </div>
-        
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={handleSwapSenderReceiver}
-            className="btn btn-sm btn-outline-secondary"
-          >
-            <FaExchangeAlt size={12} className="mr-1" />
-            交换
-          </button>
         </div>
         
         <div className="form-group">
