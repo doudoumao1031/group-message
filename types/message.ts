@@ -6,4 +6,6 @@ export interface Message {
   unixTimestamp: number
   content: string
   status: 'pending' | 'sent' | 'failed'
+  verificationStatus?: 'verified' | 'unverified' | 'pending'
+  sentMessageId?: number
 }

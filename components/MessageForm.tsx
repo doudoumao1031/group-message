@@ -60,7 +60,9 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
       time,
       unixTimestamp,
       content,
-      status: 'pending'
+      status: 'pending',
+      verificationStatus: undefined,
+      sentMessageId: undefined
     }
     
     // Add to list

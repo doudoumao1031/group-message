@@ -281,18 +281,26 @@ export default function Home() {
     // Update status to pending
     startTransition(() => {
       setMessages(prev => prev.map(msg => 
-        msg.id === id ? { ...msg, status: 'pending' } : msg
+        msg.id === id ? { ...msg, status: 'pending', verificationStatus: 'pending' } : msg
       ))
     })
     
     // Send message using server action
-    const success = await sendMessage(message)
+    const result = await sendMessage(message)
     
     // Update status based on result
     startTransition(() => {
-      setMessages(prev => prev.map(msg => 
-        msg.id === id ? { ...msg, status: success ? 'sent' : 'failed' } : msg
-      ))
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === id) {
+          return { 
+            ...msg, 
+            status: result.success ? 'sent' : 'failed',
+            verificationStatus: result.success ? 'verified' : 'unverified',
+            sentMessageId: result.sentMessageId
+          }
+        }
+        return msg
+      }))
     })
   }
   
@@ -319,14 +327,29 @@ export default function Home() {
       // Update progress
       setSendProgress({ current: i + 1, total: pendingMessages.length })
       
+      // Update status to pending
+      startTransition(() => {
+        setMessages(prev => prev.map(msg => 
+          msg.id === message.id ? { ...msg, status: 'pending', verificationStatus: 'pending' } : msg
+        ))
+      })
+      
       // Send message using server action
-      const success = await sendMessage(message)
+      const result = await sendMessage(message)
       
       // Update status
       startTransition(() => {
-        setMessages(prev => prev.map(msg => 
-          msg.id === message.id ? { ...msg, status: success ? 'sent' : 'failed' } : msg
-        ))
+        setMessages(prev => prev.map(msg => {
+          if (msg.id === message.id) {
+            return { 
+              ...msg, 
+              status: result.success ? 'sent' : 'failed',
+              verificationStatus: result.success ? 'verified' : 'unverified',
+              sentMessageId: result.sentMessageId
+            }
+          }
+          return msg
+        }))
       })
       
       // Add a small delay between requests to avoid rate limiting
@@ -402,6 +425,21 @@ export default function Home() {
       setMessages(prev => prev.map(msg => 
         msg.id === message.id ? message : msg
       ))
+    })
+  }
+
+  // Handle manual verification of a message
+  const handleVerifyMessage = (id: string, verified: boolean) => {
+    startTransition(() => {
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === id) {
+          return {
+            ...msg,
+            verificationStatus: verified ? 'verified' : 'unverified'
+          }
+        }
+        return msg
+      }))
     })
   }
 
@@ -507,6 +545,7 @@ export default function Home() {
               onSendAll={handleShowSendAllModal}
               onImportMessages={handleImportMessages}
               onExportMessages={handleExportMessages}
+              onVerifyMessage={handleVerifyMessage}
             />
             
             {/* Show loading indicator when transitions are pending */}

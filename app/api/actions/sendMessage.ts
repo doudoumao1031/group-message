@@ -2,32 +2,15 @@
 
 import { Message } from '@/types/message'
 import { encryptMsg } from '@/util/crypto'
+import { logger } from '@/util/logger'
+import { verifyMessage } from './verifyMessage'
 
-// Logger function that works in all environments
-const logger = {
-  info: (message: string, data?: any) => {
-    const timestamp = new Date().toISOString();
-    const logEntry = {
-      timestamp,
-      level: 'INFO',
-      message,
-      data,
-    };
-    console.log(`[${timestamp}] [INFO] ${message}`, data || '');
-  },
-  error: (message: string, error?: any) => {
-    const timestamp = new Date().toISOString();
-    const logEntry = {
-      timestamp,
-      level: 'ERROR',
-      message,
-      error: error?.message || error,
-    };
-    console.error(`[${timestamp}] [ERROR] ${message}`, error || '');
-  }
-};
+interface SendMessageResult {
+  success: boolean
+  sentMessageId?: number
+}
 
-export async function sendMessage(message: Message): Promise<boolean> {
+export async function sendMessage(message: Message): Promise<SendMessageResult> {
   const requestId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
   
   try {
@@ -97,16 +80,44 @@ export async function sendMessage(message: Message): Promise<boolean> {
       throw new Error(`API error: ${response.status} - ${response.statusText}`);
     }
     
-    // Log successful response
+    // Parse the response to get the message_id
+    const responseData = await response.json();
+    
+    if (!responseData.ok) {
+      logger.error(`[${requestId}] API returned non-OK status`, responseData);
+      throw new Error('API returned non-OK status');
+    }
+    
+    const sentMessageId = responseData.result.message_id;
+    
     logger.info(`[${requestId}] Message sent successfully`, { 
       status: response.status,
       duration,
-      messageId: message.id
+      messageId: message.id,
+      sentMessageId
     });
     
-    return true;
+    // Verify message delivery using getUpdates API
+    logger.info(`[${requestId}] Verifying message delivery for sentMessageId: ${sentMessageId}`);
+    
+    // Wait a short time to allow the message to be processed
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const isVerified = await verifyMessage(sentMessageId);
+    
+    logger.info(`[${requestId}] Message verification result`, { 
+      sentMessageId,
+      isVerified
+    });
+    
+    return {
+      success: isVerified,
+      sentMessageId
+    };
   } catch (error) {
     logger.error(`[${requestId}] Failed to send message`, error);
-    return false;
+    return {
+      success: false
+    };
   }
 }
