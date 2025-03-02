@@ -6,8 +6,85 @@ import MessageForm from '@/components/MessageForm'
 import MessageList from '@/components/MessageList'
 import ClientComponent from '@/components/ClientComponent'
 import { Message } from '@/types/message'
-import { FaSignOutAlt, FaTrashAlt, FaExclamationTriangle } from 'react-icons/fa'
+import { FaSignOutAlt, FaTrashAlt, FaExclamationTriangle, FaPaperPlane, FaQuestion } from 'react-icons/fa'
 import { sendMessage } from './api/actions/sendMessage'
+
+// Modal types
+type ModalType = 'none' | 'clear' | 'delete' | 'sendAll';
+
+// Modal props interface
+interface ConfirmModalProps {
+  type: ModalType;
+  message: string;
+  itemCount?: number;
+  itemId?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+// Confirmation Modal Component
+const ConfirmModal = ({ type, message, itemCount, onConfirm, onCancel }: ConfirmModalProps) => {
+  let icon = <FaQuestion className="text-2xl mr-2" />;
+  let title = "确认操作";
+  let confirmButtonClass = "btn btn-primary";
+  let confirmText = "确认";
+  let headerClass = "text-blue-600";
+  
+  switch (type) {
+    case 'clear':
+      icon = <FaTrashAlt className="text-2xl mr-2" />;
+      title = "确认清空所有消息";
+      confirmButtonClass = "btn btn-danger";
+      confirmText = "确认清空";
+      headerClass = "text-red-600";
+      break;
+    case 'delete':
+      icon = <FaTrashAlt className="text-2xl mr-2" />;
+      title = "确认删除消息";
+      confirmButtonClass = "btn btn-danger";
+      confirmText = "确认删除";
+      headerClass = "text-red-600";
+      break;
+    case 'sendAll':
+      icon = <FaPaperPlane className="text-2xl mr-2" />;
+      title = "确认发送所有消息";
+      confirmButtonClass = "btn btn-primary";
+      confirmText = "确认发送";
+      headerClass = "text-blue-600";
+      break;
+  }
+  
+  return (
+    <div className="modal-overlay">
+      <div className="modal-container">
+        <div className={`modal-header ${headerClass}`}>
+          {icon}
+          <h3 className="modal-title">{title}</h3>
+        </div>
+        
+        <div className="modal-body">
+          {message}
+          {itemCount && <span className="font-semibold"> {itemCount} </span>}
+        </div>
+        
+        <div className="modal-footer">
+          <button 
+            onClick={onCancel}
+            className="btn btn-secondary"
+          >
+            取消
+          </button>
+          <button 
+            onClick={onConfirm}
+            className={confirmButtonClass}
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -17,8 +94,18 @@ export default function Home() {
   const [sendProgress, setSendProgress] = useState({ current: 0, total: 0 })
   // React 19 useTransition hook for smoother UI updates
   const [isPending, startTransition] = useTransition()
-  // Modal state for clear confirmation
-  const [showClearModal, setShowClearModal] = useState(false)
+  // Modal state
+  const [modalState, setModalState] = useState<{
+    show: boolean;
+    type: ModalType;
+    message: string;
+    itemId?: string;
+    itemCount?: number;
+  }>({
+    show: false,
+    type: 'none',
+    message: '',
+  });
   
   // Check login status on mount
   useEffect(() => {
@@ -93,13 +180,35 @@ export default function Home() {
     setEditMessage(null)
   }
   
+  // Show delete confirmation modal
+  const handleShowDeleteModal = (id: string) => {
+    setModalState({
+      show: true,
+      type: 'delete',
+      message: '确定要删除这条消息吗？',
+      itemId: id
+    });
+  }
+  
   // Delete message
   const handleDeleteMessage = (id: string) => {
-    if (confirm('确定要删除这条消息吗？')) {
-      startTransition(() => {
-        setMessages(prev => prev.filter(msg => msg.id !== id))
-      })
+    // If called directly from a component
+    if (!modalState.show) {
+      handleShowDeleteModal(id);
+      return;
     }
+    
+    // If confirmed from modal
+    startTransition(() => {
+      setMessages(prev => prev.filter(msg => msg.id !== id))
+    });
+    
+    // Close modal
+    setModalState({
+      show: false,
+      type: 'none',
+      message: ''
+    });
   }
   
   // Show clear confirmation modal
@@ -107,7 +216,13 @@ export default function Home() {
     if (messages.length === 0) {
       return;
     }
-    setShowClearModal(true);
+    
+    setModalState({
+      show: true,
+      type: 'clear',
+      message: '您确定要清空所有消息吗？此操作不可撤销。',
+      itemCount: messages.length
+    });
   }
   
   // Clear all messages
@@ -115,12 +230,40 @@ export default function Home() {
     startTransition(() => {
       setMessages([]);
     });
-    setShowClearModal(false);
+    
+    // Close modal
+    setModalState({
+      show: false,
+      type: 'none',
+      message: ''
+    });
   }
   
-  // Cancel clear operation
-  const handleCancelClear = () => {
-    setShowClearModal(false);
+  // Show send all confirmation modal
+  const handleShowSendAllModal = () => {
+    // Filter messages that are not already sent
+    const pendingMessages = messages.filter(msg => msg.status !== 'sent');
+    
+    if (pendingMessages.length === 0) {
+      alert('没有待发送的消息');
+      return;
+    }
+    
+    setModalState({
+      show: true,
+      type: 'sendAll',
+      message: '确定要发送所有待发送的消息吗？',
+      itemCount: pendingMessages.length
+    });
+  }
+  
+  // Cancel modal
+  const handleCancelModal = () => {
+    setModalState({
+      show: false,
+      type: 'none',
+      message: ''
+    });
   }
   
   // Send a specific message
@@ -151,14 +294,12 @@ export default function Home() {
     // Filter messages that are not already sent
     const pendingMessages = messages.filter(msg => msg.status !== 'sent')
     
-    if (pendingMessages.length === 0) {
-      alert('没有待发送的消息')
-      return
-    }
-    
-    if (!confirm(`确定要发送全部 ${pendingMessages.length} 条消息吗？`)) {
-      return
-    }
+    // Close modal first
+    setModalState({
+      show: false,
+      type: 'none',
+      message: ''
+    });
     
     // Set sending state
     setIsSending(true)
@@ -335,7 +476,7 @@ export default function Home() {
                   清空
                 </button>
                 <button 
-                  onClick={handleSendAll}
+                  onClick={handleShowSendAllModal}
                   className="btn btn-xs btn-primary"
                   disabled={isSending || messages.length === 0}
                 >
@@ -347,9 +488,9 @@ export default function Home() {
             <MessageList 
               messages={messages}
               onEditMessage={handleEditMessage}
-              onDeleteMessage={handleDeleteMessage}
+              onDeleteMessage={handleShowDeleteModal}
               onSendMessage={handleSendMessage}
-              onSendAll={handleSendAll}
+              onSendAll={handleShowSendAllModal}
               onImportMessages={handleImportMessages}
               onExportMessages={handleExportMessages}
             />
@@ -362,35 +503,29 @@ export default function Home() {
             )}
           </div>
           
-          {/* Clear Confirmation Modal */}
-          {showClearModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
-                <div className="flex items-center text-red-500 mb-4">
-                  <FaExclamationTriangle className="text-2xl mr-2" />
-                  <h3 className="text-xl font-bold">确认清空所有消息</h3>
-                </div>
-                
-                <p className="mb-6">
-                  您确定要清空所有 <span className="font-semibold">{messages.length}</span> 条消息吗？此操作不可撤销。
-                </p>
-                
-                <div className="flex justify-end gap-3">
-                  <button 
-                    onClick={handleCancelClear}
-                    className="btn btn-secondary"
-                  >
-                    取消
-                  </button>
-                  <button 
-                    onClick={handleClearAll}
-                    className="btn btn-danger"
-                  >
-                    确认清空
-                  </button>
-                </div>
-              </div>
-            </div>
+          {/* Confirmation Modal */}
+          {modalState.show && (
+            <ConfirmModal
+              type={modalState.type}
+              message={modalState.message}
+              itemCount={modalState.itemCount}
+              onConfirm={() => {
+                switch (modalState.type) {
+                  case 'clear':
+                    handleClearAll();
+                    break;
+                  case 'delete':
+                    if (modalState.itemId) {
+                      handleDeleteMessage(modalState.itemId);
+                    }
+                    break;
+                  case 'sendAll':
+                    handleSendAll();
+                    break;
+                }
+              }}
+              onCancel={handleCancelModal}
+            />
           )}
         </div>
       )}
