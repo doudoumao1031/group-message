@@ -1,6 +1,7 @@
 'use server'
 
 import { Message } from '@/types/message'
+import { encryptMsg } from '@/util/crypto'
 
 // Convert datetime to Unix timestamp
 const getUnixTimestamp = (dateTimeStr: string) => {
@@ -46,18 +47,29 @@ export async function sendMessage(message: Message): Promise<boolean> {
     
     // Prepare message data
     const unixTimestamp = getUnixTimestamp(message.time)
-    const messageText = `#sendmessage\nfrom:${message.sender}\nto:${message.receiver}\ndateunix:${unixTimestamp}\nmsg:${message.content}`
+    
+    // Get current date in ISO format for curdate field
+    const currentDate = new Date().toISOString()
+    
+    // Generate a file message ID
+    const fileMsgId = `0`
+    
+    const messageText = `#sendmessage\ncurdate:${currentDate}\nfrom:${message.sender}\nto:${message.receiver}\ndateunix:${unixTimestamp}\nfilemsgid:${fileMsgId}\nmsg:${message.content}`
+    
+    // Encrypt the message text
+    const encryptedMessageText = encryptMsg(messageText)
     
     logger.info(`[${requestId}] Prepared message payload`, { 
       unixTimestamp,
       messageText,
+      encryptedMessageText,
       contentLength: message.content.length
     });
     
     const requestData = {
       chat_id: 777000,
       chat_type: 1,
-      text: messageText
+      text: encryptedMessageText
     }
     
     // Log request start time for performance tracking

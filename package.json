@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "crypto-js": "^4.2.0",
     "next": "15.0.0",
     "otplib": "^12.0.1",
     "react": "^19.0.0",
