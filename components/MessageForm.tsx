@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FaPlus, FaTrash } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaExchangeAlt } from 'react-icons/fa'
 import { Message } from '@/types/message'
 
 interface MessageFormProps {
@@ -67,12 +67,19 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
   }
 
   const clearForm = () => {
-    setSender('')
-    setReceiver('')
+    // Don't reset sender and receiver anymore
+    // setSender('')
+    // setReceiver('')
     // Don't reset time to keep the current time
     setContent('')
     setIsEditing(false)
     onCancelEdit()
+  }
+
+  const handleSwapSenderReceiver = () => {
+    const tempSender = sender;
+    setSender(receiver);
+    setReceiver(tempSender);
   }
 
   return (
@@ -102,6 +109,17 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
             required
           />
         </div>
+      </div>
+      
+      <div className="hidden md:flex md:justify-end">
+        <button
+          type="button"
+          onClick={handleSwapSenderReceiver}
+          className="btn btn-sm btn-outline-secondary"
+        >
+          <FaExchangeAlt size={12} className="mr-1" />
+          交换发送者/接收者
+        </button>
       </div>
       
       <div className="hidden md:flex md:items-center">
@@ -151,6 +169,17 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
             onChange={(e) => setReceiver(e.target.value)}
             required
           />
+        </div>
+        
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleSwapSenderReceiver}
+            className="btn btn-sm btn-outline-secondary"
+          >
+            <FaExchangeAlt size={12} className="mr-1" />
+            交换
+          </button>
         </div>
         
         <div className="form-group">
