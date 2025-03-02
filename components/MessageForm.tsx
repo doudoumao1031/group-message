@@ -77,12 +77,13 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
 
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
-      <div className="grid grid-cols-2 gap-3">
+      {/* Desktop layout */}
+      <div className="hidden md:grid md:grid-cols-2 md:gap-3">
         <div className="flex items-center">
-          <label htmlFor="sender" className="w-16 text-sm font-medium text-gray-700">发送者:</label>
+          <label htmlFor="sender-desktop" className="w-16 text-sm font-medium text-gray-700">发送者:</label>
           <input
             type="text"
-            id="sender"
+            id="sender-desktop"
             className="form-control flex-1"
             value={sender}
             onChange={(e) => setSender(e.target.value)}
@@ -91,10 +92,10 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
         </div>
         
         <div className="flex items-center">
-          <label htmlFor="receiver" className="w-16 text-sm font-medium text-gray-700">接收者:</label>
+          <label htmlFor="receiver-desktop" className="w-16 text-sm font-medium text-gray-700">接收者:</label>
           <input
             type="text"
-            id="receiver"
+            id="receiver-desktop"
             className="form-control flex-1"
             value={receiver}
             onChange={(e) => setReceiver(e.target.value)}
@@ -103,11 +104,11 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
         </div>
       </div>
       
-      <div className="flex items-center">
-        <label htmlFor="time" className="w-16 text-sm font-medium text-gray-700">时间:</label>
+      <div className="hidden md:flex md:items-center">
+        <label htmlFor="time-desktop" className="w-16 text-sm font-medium text-gray-700">时间:</label>
         <input
           type="datetime-local"
-          id="time"
+          id="time-desktop"
           className="form-control flex-1"
           value={time}
           onChange={(e) => setTime(e.target.value)}
@@ -115,15 +116,65 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
         />
       </div>
       
-      <div className="flex items-start">
-        <label htmlFor="content" className="w-16 text-sm font-medium text-gray-700 pt-2">内容:</label>
+      <div className="hidden md:flex md:items-start">
+        <label htmlFor="content-desktop" className="w-16 text-sm font-medium text-gray-700 pt-2">内容:</label>
         <textarea
-          id="content"
+          id="content-desktop"
           className="form-control flex-1 min-h-[80px]"
           value={content}
           onChange={(e) => setContent(e.target.value)}
           required
         />
+      </div>
+      
+      {/* Mobile layout */}
+      <div className="md:hidden space-y-2">
+        <div className="form-group">
+          <label htmlFor="sender-mobile" className="block text-xs font-medium text-gray-700 mb-1">发送者:</label>
+          <input
+            type="text"
+            id="sender-mobile"
+            className="form-control text-sm"
+            value={sender}
+            onChange={(e) => setSender(e.target.value)}
+            required
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="receiver-mobile" className="block text-xs font-medium text-gray-700 mb-1">接收者:</label>
+          <input
+            type="text"
+            id="receiver-mobile"
+            className="form-control text-sm"
+            value={receiver}
+            onChange={(e) => setReceiver(e.target.value)}
+            required
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="time-mobile" className="block text-xs font-medium text-gray-700 mb-1">时间:</label>
+          <input
+            type="datetime-local"
+            id="time-mobile"
+            className="form-control text-sm"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            required
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="content-mobile" className="block text-xs font-medium text-gray-700 mb-1">内容:</label>
+          <textarea
+            id="content-mobile"
+            className="form-control text-sm min-h-[60px]"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            required
+          />
+        </div>
       </div>
       
       <div className="flex gap-2 pt-1">

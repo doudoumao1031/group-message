@@ -8,6 +8,23 @@
   }
 }
 
+/* Mobile-specific base styles */
+@media (max-width: 768px) {
+  button, 
+  [type='button'],
+  [type='reset'],
+  [type='submit'] {
+    min-height: 36px;
+    min-width: 36px;
+  }
+  
+  input,
+  select,
+  textarea {
+    font-size: 1rem; /* Larger font size for better readability */
+  }
+}
+
 @layer components {
   .btn {
     @apply px-4 py-2 rounded font-medium transition-all duration-200 flex items-center justify-center gap-2;
@@ -19,6 +36,13 @@
   
   .btn-xs {
     @apply px-2 py-0.5 text-xs;
+  }
+  
+  /* Mobile-specific button styles */
+  @media (max-width: 768px) {
+    .btn-xs {
+      padding: 0.25rem 0.5rem;
+    }
   }
   
   .btn-primary {
@@ -47,6 +71,14 @@
   
   .form-control {
     @apply w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary;
+  }
+  
+  /* Mobile-specific form control styles */
+  @media (max-width: 768px) {
+    .form-control {
+      padding-top: 0.625rem;
+      padding-bottom: 0.625rem;
+    }
   }
   
   .form-label {
@@ -78,6 +110,14 @@
     @apply bg-white rounded-lg shadow-lg p-6 max-w-md w-full;
   }
   
+  /* Mobile-specific modal styles */
+  @media (max-width: 768px) {
+    .modal-container {
+      margin-left: 1rem;
+      margin-right: 1rem;
+    }
+  }
+  
   .modal-header {
     @apply flex items-center mb-4;
   }
@@ -92,5 +132,27 @@
   
   .modal-footer {
     @apply flex justify-end gap-3;
+  }
+  
+  /* Mobile specific card styles */
+  .mobile-card {
+    @apply bg-white border rounded-md shadow-sm p-3 mb-2;
+  }
+  
+  .mobile-card-header {
+    @apply flex justify-between items-center mb-2;
+  }
+  
+  .mobile-card-body {
+    @apply text-sm;
+  }
+  
+  /* Dropdown menu for mobile */
+  .mobile-dropdown {
+    @apply absolute right-0 top-full mt-1 bg-white shadow-lg rounded-md z-10 py-1 min-w-[120px];
+  }
+  
+  .mobile-dropdown-item {
+    @apply w-full text-left px-3 py-2 text-xs hover:bg-gray-100 flex items-center;
   }
 }

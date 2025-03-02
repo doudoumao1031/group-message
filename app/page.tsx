@@ -448,9 +448,9 @@ export default function Home() {
           
           {/* Message List Section */}
           <div className="bg-white rounded shadow-sm p-3">
-            <div className="flex justify-between items-center mb-2">
+            <div className="flex flex-wrap justify-between items-center mb-2 gap-2">
               <h2 className="text-base font-semibold">消息列表</h2>
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-1">
                 <label className="btn btn-xs btn-secondary">
                   导入JSON
                   <input 
