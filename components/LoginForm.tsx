@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { FaUser, FaLock, FaSignInAlt, FaShieldAlt } from 'react-icons/fa'
-import { authenticator } from 'otplib'
+import { authenticate } from '@/app/api/actions/authenticate'
 
 interface LoginFormProps {
   onLoginSuccess: () => void
@@ -14,57 +14,41 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
   const [totpCode, setTotpCode] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
-  // Hardcoded credentials (in a real app, this would be validated on the server)
-  const validUsername = 'admin7346'
-  const validPassword = "hs$@1k^da34&%>sf"
-  const totpSecret = "ZT5L4LKRJNWBQCPA2TCP5D4EPC7XGQLR"
-
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     
     // Reset messages
     setError('')
     setSuccess('')
+    setIsLoading(true)
     
-    // Validate username
-    if (username !== validUsername) {
-      setError('用户名错误')
-      return
-    }
-    
-    // Validate password
-    if (password !== validPassword) {
-      setError('密码错误')
-      return
-    }
-    
-    // Validate TOTP code
     try {
-      const isValid = authenticator.verify({ 
-        token: totpCode, 
-        secret: totpSecret 
-      })
+      // Call server-side authentication
+      const result = await authenticate({ username, password, totpCode })
       
-      if (!isValid) {
-        setError('验证码错误或已过期')
+      if (!result.success) {
+        setError(result.error || '登录失败')
+        setIsLoading(false)
         return
       }
+      
+      // Login successful
+      setSuccess('登录成功，正在跳转...')
+      
+      // Store login state in session storage
+      sessionStorage.setItem('isLoggedIn', 'true')
+      
+      // Notify parent component
+      setTimeout(() => {
+        onLoginSuccess()
+      }, 1000)
     } catch (err) {
-      setError('验证码格式错误')
-      return
+      setError('登录过程中发生错误，请重试')
+    } finally {
+      setIsLoading(false)
     }
-    
-    // Login successful
-    setSuccess('登录成功，正在跳转...')
-    
-    // Store login state in session storage
-    sessionStorage.setItem('isLoggedIn', 'true')
-    
-    // Notify parent component
-    setTimeout(() => {
-      onLoginSuccess()
-    }, 1000)
   }
 
   return (
@@ -99,6 +83,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="请输入用户名"
                 required
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -117,39 +102,38 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="请输入密码"
                 required
+                disabled={isLoading}
               />
             </div>
           </div>
           
           <div className="mb-6">
-            <label htmlFor="totpCode" className="form-label">验证码</label>
+            <label htmlFor="totp" className="form-label">验证码</label>
             <div className="relative">
               <span className="absolute left-3 top-2.5 text-gray-500">
                 <FaShieldAlt />
               </span>
               <input
                 type="text"
-                id="totpCode"
+                id="totp"
                 className="form-control pl-10"
                 value={totpCode}
-                onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => setTotpCode(e.target.value)}
                 placeholder="请输入6位验证码"
                 maxLength={6}
-                pattern="[0-9]{6}"
                 required
+                disabled={isLoading}
               />
             </div>
-            <p className="mt-1 text-xs text-gray-500">
-              请输入您的身份验证器应用中显示的6位验证码
-            </p>
           </div>
           
           <button 
             type="submit" 
             className="btn btn-primary w-full"
+            disabled={isLoading}
           >
-            <FaSignInAlt />
-            登录
+            <FaSignInAlt className="mr-2" />
+            {isLoading ? '登录中...' : '登录'}
           </button>
         </form>
       </div>
