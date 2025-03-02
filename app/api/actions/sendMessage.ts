@@ -50,6 +50,7 @@ export async function sendMessage(message: Message): Promise<boolean> {
     
     logger.info(`[${requestId}] Prepared message payload`, { 
       unixTimestamp,
+      messageText,
       contentLength: message.content.length
     });
     
