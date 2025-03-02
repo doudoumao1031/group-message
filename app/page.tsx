@@ -480,7 +480,7 @@ export default function Home() {
                   className="btn btn-xs btn-primary"
                   disabled={isSending || messages.length === 0}
                 >
-                  发送全部
+                  导入聊天记录
                 </button>
               </div>
             </div>
