@@ -7,6 +7,8 @@ import { getApiUrl, API_ENDPOINTS } from '@/util/api'
 interface SendMessageResult {
   success: boolean
   sentMessageId?: number
+  errorCode?: string
+  errorMessage?: string
 }
 
 export async function sendMessage(message: Message): Promise<SendMessageResult> {
@@ -73,7 +75,11 @@ export async function sendMessage(message: Message): Promise<SendMessageResult> 
         duration,
         errorText
       });
-      throw new Error(`API error: ${response.status} - ${response.statusText}`);
+      return {
+        success: false,
+        errorCode: 'HTTP_ERROR',
+        errorMessage: `API error: ${response.status} - ${response.statusText}`
+      };
     }
     
     // Parse the response
@@ -83,7 +89,38 @@ export async function sendMessage(message: Message): Promise<SendMessageResult> 
     // The API returns { ok: true, data: 'success' } when successful
     if (!responseData.ok) {
       logger.error(`[${requestId}] API returned non-success status`, responseData);
-      throw new Error('API returned non-success status');
+      
+      // Handle specific error cases
+      if (responseData.errMessage) {
+        // Time error handling
+        if (responseData.errMessage.includes('时间错误')) {
+          logger.error(`[${requestId}] Time error detected`, { 
+            errorMessage: responseData.errMessage,
+            messageTimestamp: message.unixTimestamp,
+            currentTimestamp: currentDate
+          });
+          
+          return {
+            success: false,
+            errorCode: 'TIME_ERROR',
+            errorMessage: responseData.errMessage
+          };
+        }
+        
+        // Return the specific error message from the API
+        return {
+          success: false,
+          errorCode: 'API_ERROR',
+          errorMessage: responseData.errMessage
+        };
+      }
+      
+      // Generic error case
+      return {
+        success: false,
+        errorCode: 'UNKNOWN_ERROR',
+        errorMessage: 'API returned non-success status'
+      };
     }
     
     // Generate a message ID for tracking purposes
@@ -106,7 +143,9 @@ export async function sendMessage(message: Message): Promise<SendMessageResult> 
   } catch (error) {
     logger.error(`[${requestId}] Failed to send message`, error);
     return {
-      success: false
+      success: false,
+      errorCode: 'EXCEPTION',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
     };
   }
 }
