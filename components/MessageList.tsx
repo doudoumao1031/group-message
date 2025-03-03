@@ -70,12 +70,12 @@ export default function MessageList({
   }
   
   // Get status text
-  const getStatusText = (status: string) => {
+  const getStatusText = (status: string, errorMessage?: string) => {
     switch(status) {
       case 'sent':
         return '已发送'
       case 'failed':
-        return '失败'
+        return errorMessage ? `失败: ${errorMessage}` : '失败'
       default:
         return '待发送'
     }
@@ -150,7 +150,7 @@ export default function MessageList({
                     <td className="px-2 py-1 max-w-[180px] truncate">{message.content}</td>
                     <td className="px-2 py-1">
                       <span className={getStatusBadgeClass(message.status)}>
-                        {getStatusText(message.status)}
+                        {getStatusText(message.status, message.errorMessage)}
                       </span>
                     </td>
                     <td className="px-2 py-1">
@@ -212,7 +212,7 @@ export default function MessageList({
                       className="rounded h-3 w-3 mr-2"
                     />
                     <span className={getStatusBadgeClass(message.status)}>
-                      {getStatusText(message.status)}
+                      {getStatusText(message.status, message.errorMessage)}
                     </span>
                   </div>
                   

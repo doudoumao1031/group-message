@@ -8,4 +8,6 @@ export interface Message {
   status: 'pending' | 'sent' | 'failed'
   verificationStatus?: 'verified' | 'unverified' | 'pending'
   sentMessageId?: number
+  errorMessage?: string
+  errorCode?: string
 }

@@ -315,16 +315,38 @@ export default function Home() {
       message: ''
     });
     
+    // Group messages by sender-receiver pairs
+    const messageGroups: Record<string, Message[]> = {}
+    
+    pendingMessages.forEach(message => {
+      const key = `${message.sender}-${message.receiver}`
+      if (!messageGroups[key]) {
+        messageGroups[key] = []
+      }
+      messageGroups[key].push(message)
+    })
+    
+    // Sort each group by timestamp (ascending order)
+    Object.keys(messageGroups).forEach(key => {
+      messageGroups[key].sort((a, b) => {
+        // Sort by Unix timestamp (earlier messages first)
+        return a.unixTimestamp - b.unixTimestamp
+      })
+    })
+    
+    // Flatten the groups back into a single array
+    const sortedMessages = Object.values(messageGroups).flat()
+    
     // Set sending state
     setIsSending(true)
-    setSendProgress({ current: 0, total: pendingMessages.length })
+    setSendProgress({ current: 0, total: sortedMessages.length })
     
     // Send messages one by one
-    for (let i = 0; i < pendingMessages.length; i++) {
-      const message = pendingMessages[i]
+    for (let i = 0; i < sortedMessages.length; i++) {
+      const message = sortedMessages[i]
       
       // Update progress
-      setSendProgress({ current: i + 1, total: pendingMessages.length })
+      setSendProgress({ current: i + 1, total: sortedMessages.length })
       
       // Update status to pending
       startTransition(() => {
@@ -343,15 +365,44 @@ export default function Home() {
             return { 
               ...msg, 
               status: result.success ? 'sent' : 'failed',
-              sentMessageId: result.sentMessageId
+              sentMessageId: result.sentMessageId,
+              errorMessage: result.errorMessage
             }
           }
           return msg
         }))
       })
       
+      // If sending failed with a time error, stop sending more messages to this recipient
+      if (!result.success && result.errorCode === 'TIME_ERROR') {
+        const currentKey = `${message.sender}-${message.receiver}`
+        
+        // Mark remaining messages in this group as failed
+        const remainingMessages = sortedMessages.slice(i + 1)
+          .filter(msg => `${msg.sender}-${msg.receiver}` === currentKey)
+        
+        if (remainingMessages.length > 0) {
+          startTransition(() => {
+            setMessages(prev => prev.map(msg => {
+              if (remainingMessages.some(rm => rm.id === msg.id)) {
+                return {
+                  ...msg,
+                  status: 'failed',
+                  errorMessage: '前序消息发送失败，时间顺序错误'
+                }
+              }
+              return msg
+            }))
+          })
+          
+          // Skip the remaining messages for this sender-receiver pair
+          i += remainingMessages.length
+          setSendProgress({ current: i + 1, total: sortedMessages.length })
+        }
+      }
+      
       // Add a small delay between requests to avoid rate limiting
-      if (i < pendingMessages.length - 1) {
+      if (i < sortedMessages.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 500))
       }
     }
