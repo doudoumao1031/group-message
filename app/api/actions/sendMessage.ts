@@ -11,6 +11,47 @@ interface SendMessageResult {
   errorMessage?: string
 }
 
+/**
+ * Fetches the last dialog timestamp between two users
+ * @param from The sender ID
+ * @param to The receiver ID
+ * @returns The last timestamp or null if error
+ */
+async function getLastDialogTimestamp(from: string, to: string): Promise<number | null> {
+  try {
+    const apiUrl = getApiUrl(API_ENDPOINTS.GET_DIALOG_LAST_DATE);
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ from, to }),
+      cache: 'no-store'
+    });
+    
+    if (!response.ok) {
+      logger.error(`Failed to get last dialog timestamp`, { 
+        status: response.status, 
+        statusText: response.statusText
+      });
+      return null;
+    }
+    
+    const responseData = await response.json();
+    
+    if (!responseData.ok) {
+      logger.error(`API returned non-success status for last dialog timestamp`, responseData);
+      return null;
+    }
+    
+    return responseData.data;
+  } catch (error) {
+    logger.error(`Exception when getting last dialog timestamp`, error);
+    return null;
+  }
+}
+
 export async function sendMessage(message: Message): Promise<SendMessageResult> {
   const requestId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
   
@@ -21,6 +62,27 @@ export async function sendMessage(message: Message): Promise<SendMessageResult> 
       messageId: message.id,
       status: message.status
     });
+    
+    // Get the last dialog timestamp
+    const lastTimestamp = await getLastDialogTimestamp(message.sender, message.receiver);
+    logger.info(`[${requestId}] Retrieved last dialog timestamp`, { 
+      lastTimestamp,
+      messageTimestamp: message.unixTimestamp
+    });
+    
+    // Check if the message timestamp is valid
+    if (lastTimestamp !== null && message.unixTimestamp <= lastTimestamp) {
+      logger.error(`[${requestId}] Message timestamp is not greater than last dialog timestamp`, {
+        messageTimestamp: message.unixTimestamp,
+        lastTimestamp
+      });
+      
+      return {
+        success: false,
+        errorCode: 'TIME_ERROR',
+        errorMessage: '时间错误-消息时间必须最近一条消息时间'
+      };
+    }
     
     const apiUrl = getApiUrl(API_ENDPOINTS.IMPORT_MESSAGE);
     

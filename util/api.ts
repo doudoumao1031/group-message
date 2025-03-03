@@ -26,5 +26,6 @@ export function getApiUrl(endpoint: string): string {
 // Common API endpoints
 export const API_ENDPOINTS = {
   IMPORT_MESSAGE: 'import/message',
-  SEARCH_USER: 'search/user'
+  SEARCH_USER: 'search/user',
+  GET_DIALOG_LAST_DATE: 'getdialoglastdate'
 };
