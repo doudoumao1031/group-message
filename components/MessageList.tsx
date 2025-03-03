@@ -1,9 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { FaEdit, FaTrash, FaPaperPlane, FaEllipsisV, FaCheckCircle } from 'react-icons/fa'
+import { FaEdit, FaTrash, FaPaperPlane, FaEllipsisV, FaFileImport, FaFileExport } from 'react-icons/fa'
 import { Message } from '@/types/message'
-import { verifyMessageById } from '@/app/api/actions/verifyMessageById'
 
 interface MessageListProps {
   messages: Message[]
@@ -13,7 +12,6 @@ interface MessageListProps {
   onSendAll: () => void
   onImportMessages: (e: React.ChangeEvent<HTMLInputElement>) => void
   onExportMessages: () => void
-  onVerifyMessage?: (id: string, verified: boolean) => void
 }
 
 export default function MessageList({
@@ -23,8 +21,7 @@ export default function MessageList({
   onSendMessage,
   onSendAll,
   onImportMessages,
-  onExportMessages,
-  onVerifyMessage
+  onExportMessages
 }: MessageListProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
@@ -84,56 +81,35 @@ export default function MessageList({
     }
   }
   
-  // Get verification status badge class
-  const getVerificationBadgeClass = (status?: string) => {
-    switch(status) {
-      case 'verified':
-        return 'message-status message-status-verified'
-      case 'unverified':
-        return 'message-status message-status-unverified'
-      case 'pending':
-        return 'message-status message-status-pending'
-      default:
-        return 'message-status message-status-none'
-    }
-  }
-  
-  // Get verification status text
-  const getVerificationText = (status?: string) => {
-    switch(status) {
-      case 'verified':
-        return '已确认'
-      case 'unverified':
-        return '未确认'
-      case 'pending':
-        return '确认中'
-      default:
-        return '未发送'
-    }
-  }
-  
   // Toggle dropdown menu for mobile
   const toggleDropdown = (id: string) => {
     setActiveDropdown(prev => prev === id ? null : id)
   }
 
-  // Handle manual verification
-  const handleManualVerify = async (message: Message) => {
-    if (!message.sentMessageId) return;
-    
-    try {
-      const isVerified = await verifyMessageById(message.sentMessageId);
-      
-      if (onVerifyMessage) {
-        onVerifyMessage(message.id, isVerified);
-      }
-    } catch (error) {
-      console.error('Failed to verify message:', error);
-    }
-  };
-
   return (
     <div>
+      {/* Import/Export buttons */}
+      <div className="flex justify-end mb-2 gap-1">
+        <label className="btn btn-xs btn-secondary flex items-center">
+          <FaFileImport className="mr-1" size={10} />
+          导入JSON
+          <input 
+            type="file" 
+            accept=".json" 
+            onChange={onImportMessages} 
+            className="hidden" 
+          />
+        </label>
+        <button 
+          onClick={onExportMessages}
+          className="btn btn-xs btn-secondary flex items-center"
+          disabled={messages.length === 0}
+        >
+          <FaFileExport className="mr-1" size={10} />
+          导出JSON
+        </button>
+      </div>
+      
       {messages.length > 0 ? (
         <>
           {/* Desktop view - table */}
@@ -154,7 +130,6 @@ export default function MessageList({
                   <th className="px-2 py-1 text-left">时间</th>
                   <th className="px-2 py-1 text-left">内容</th>
                   <th className="px-2 py-1 text-left">状态</th>
-                  <th className="px-2 py-1 text-left">确认状态</th>
                   <th className="px-2 py-1 text-left">操作</th>
                 </tr>
               </thead>
@@ -176,11 +151,6 @@ export default function MessageList({
                     <td className="px-2 py-1">
                       <span className={getStatusBadgeClass(message.status)}>
                         {getStatusText(message.status)}
-                      </span>
-                    </td>
-                    <td className="px-2 py-1">
-                      <span className={getVerificationBadgeClass(message.verificationStatus)}>
-                        {getVerificationText(message.verificationStatus)}
                       </span>
                     </td>
                     <td className="px-2 py-1">
@@ -208,15 +178,6 @@ export default function MessageList({
                         >
                           <FaPaperPlane size={10} />
                         </button>
-                        {message.status === 'sent' && message.verificationStatus === 'unverified' && message.sentMessageId && (
-                          <button
-                            onClick={() => handleManualVerify(message)}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="手动验证"
-                          >
-                            <FaCheckCircle size={10} />
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -252,9 +213,6 @@ export default function MessageList({
                     />
                     <span className={getStatusBadgeClass(message.status)}>
                       {getStatusText(message.status)}
-                    </span>
-                    <span className={`ml-1 ${getVerificationBadgeClass(message.verificationStatus)}`}>
-                      {getVerificationText(message.verificationStatus)}
                     </span>
                   </div>
                   
@@ -300,18 +258,6 @@ export default function MessageList({
                           <FaPaperPlane size={10} className="mr-2 text-green-600" />
                           发送
                         </button>
-                        {message.status === 'sent' && message.verificationStatus === 'unverified' && message.sentMessageId && (
-                          <button 
-                            onClick={() => {
-                              handleManualVerify(message);
-                              setActiveDropdown(null);
-                            }}
-                            className="w-full text-left px-3 py-1 text-xs hover:bg-gray-100 flex items-center"
-                          >
-                            <FaCheckCircle size={10} className="mr-2 text-blue-600" />
-                            手动验证
-                          </button>
-                        )}
                       </div>
                     )}
                   </div>

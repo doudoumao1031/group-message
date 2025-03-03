@@ -281,21 +281,20 @@ export default function Home() {
     // Update status to pending
     startTransition(() => {
       setMessages(prev => prev.map(msg => 
-        msg.id === id ? { ...msg, status: 'pending', verificationStatus: 'pending' } : msg
+        msg.id === id ? { ...msg, status: 'pending' } : msg
       ))
     })
     
     // Send message using server action
     const result = await sendMessage(message)
     
-    // Update status based on result
+    // Update status
     startTransition(() => {
       setMessages(prev => prev.map(msg => {
         if (msg.id === id) {
           return { 
             ...msg, 
             status: result.success ? 'sent' : 'failed',
-            verificationStatus: result.success ? 'verified' : 'unverified',
             sentMessageId: result.sentMessageId
           }
         }
@@ -330,7 +329,7 @@ export default function Home() {
       // Update status to pending
       startTransition(() => {
         setMessages(prev => prev.map(msg => 
-          msg.id === message.id ? { ...msg, status: 'pending', verificationStatus: 'pending' } : msg
+          msg.id === message.id ? { ...msg, status: 'pending' } : msg
         ))
       })
       
@@ -344,7 +343,6 @@ export default function Home() {
             return { 
               ...msg, 
               status: result.success ? 'sent' : 'failed',
-              verificationStatus: result.success ? 'verified' : 'unverified',
               sentMessageId: result.sentMessageId
             }
           }
@@ -362,84 +360,12 @@ export default function Home() {
     setIsSending(false)
   }
   
-  // Import messages from JSON file
-  const handleImportMessages = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      try {
-        const importedMessages = JSON.parse(event.target?.result as string)
-        
-        if (Array.isArray(importedMessages)) {
-          // Validate imported messages
-          const validMessages = importedMessages.filter(msg => 
-            msg.id && msg.sender && msg.receiver && msg.time && msg.content
-          )
-          
-          if (validMessages.length > 0) {
-            startTransition(() => {
-              setMessages(validMessages)
-            })
-            alert(`成功导入 ${validMessages.length} 条消息`)
-          } else {
-            alert('导入的文件不包含有效的消息数据')
-          }
-        } else {
-          alert('导入的文件格式不正确')
-        }
-      } catch (error) {
-        alert('导入失败：文件格式错误')
-        console.error('Import error:', error)
-      }
-    }
-    
-    reader.readAsText(file)
-    
-    // Reset file input
-    e.target.value = ''
-  }
-  
-  // Export messages to JSON file
-  const handleExportMessages = () => {
-    if (messages.length === 0) {
-      alert('没有消息可导出')
-      return
-    }
-    
-    const dataStr = JSON.stringify(messages, null, 2)
-    const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`
-    
-    const exportFileName = `messages_${new Date().toISOString().slice(0, 10)}.json`
-    
-    const linkElement = document.createElement('a')
-    linkElement.setAttribute('href', dataUri)
-    linkElement.setAttribute('download', exportFileName)
-    linkElement.click()
-  }
-
   // Update a message (for ClientComponent demo)
   const handleUpdateMessage = (message: Message) => {
     startTransition(() => {
       setMessages(prev => prev.map(msg => 
         msg.id === message.id ? message : msg
       ))
-    })
-  }
-
-  // Handle manual verification of a message
-  const handleVerifyMessage = (id: string, verified: boolean) => {
-    startTransition(() => {
-      setMessages(prev => prev.map(msg => {
-        if (msg.id === id) {
-          return {
-            ...msg,
-            verificationStatus: verified ? 'verified' : 'unverified'
-          }
-        }
-        return msg
-      }))
     })
   }
 
@@ -503,22 +429,6 @@ export default function Home() {
             <div className="flex flex-wrap justify-between items-center mb-2 gap-2">
               <h2 className="text-base font-semibold">消息列表</h2>
               <div className="flex flex-wrap gap-1">
-                <label className="btn btn-xs btn-secondary">
-                  导入JSON
-                  <input 
-                    type="file" 
-                    accept=".json" 
-                    onChange={handleImportMessages} 
-                    className="hidden" 
-                  />
-                </label>
-                <button 
-                  onClick={handleExportMessages}
-                  className="btn btn-xs btn-secondary"
-                  disabled={messages.length === 0}
-                >
-                  导出JSON
-                </button>
                 <button 
                   onClick={handleShowClearModal}
                   className="btn btn-xs btn-outline-danger"
@@ -532,7 +442,7 @@ export default function Home() {
                   className="btn btn-xs btn-primary"
                   disabled={isSending || messages.length === 0}
                 >
-                  导入聊天记录
+                  发送所有消息
                 </button>
               </div>
             </div>
@@ -543,9 +453,59 @@ export default function Home() {
               onDeleteMessage={handleShowDeleteModal}
               onSendMessage={handleSendMessage}
               onSendAll={handleShowSendAllModal}
-              onImportMessages={handleImportMessages}
-              onExportMessages={handleExportMessages}
-              onVerifyMessage={handleVerifyMessage}
+              onImportMessages={(e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                
+                const reader = new FileReader()
+                reader.onload = (event) => {
+                  try {
+                    const importedMessages = JSON.parse(event.target?.result as string)
+                    
+                    if (Array.isArray(importedMessages)) {
+                      // Validate imported messages
+                      const validMessages = importedMessages.filter(msg => 
+                        msg.id && msg.sender && msg.receiver && msg.time && msg.content
+                      )
+                      
+                      if (validMessages.length > 0) {
+                        startTransition(() => {
+                          setMessages(validMessages)
+                        })
+                        alert(`成功导入 ${validMessages.length} 条消息`)
+                      } else {
+                        alert('导入的文件不包含有效的消息数据')
+                      }
+                    } else {
+                      alert('导入的文件格式不正确')
+                    }
+                  } catch (error) {
+                    alert('导入失败：文件格式错误')
+                    console.error('Import error:', error)
+                  }
+                }
+                
+                reader.readAsText(file)
+                
+                // Reset file input
+                e.target.value = ''
+              }} 
+              onExportMessages={() => {
+                if (messages.length === 0) {
+                  alert('没有消息可导出')
+                  return
+                }
+                
+                const dataStr = JSON.stringify(messages, null, 2)
+                const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`
+                
+                const exportFileName = `messages_${new Date().toISOString().slice(0, 10)}.json`
+                
+                const linkElement = document.createElement('a')
+                linkElement.setAttribute('href', dataUri)
+                linkElement.setAttribute('download', exportFileName)
+                linkElement.click()
+              }}
             />
             
             {/* Show loading indicator when transitions are pending */}

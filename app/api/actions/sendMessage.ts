@@ -1,9 +1,8 @@
 'use server'
 
 import { Message } from '@/types/message'
-import { encryptMsg } from '@/util/crypto'
 import { logger } from '@/util/logger'
-import { verifyMessage } from './verifyMessage'
+import { getApiUrl, API_ENDPOINTS } from '@/util/api'
 
 interface SendMessageResult {
   success: boolean
@@ -21,31 +20,28 @@ export async function sendMessage(message: Message): Promise<SendMessageResult> 
       status: message.status
     });
     
-    const apiUrl = 'https://api.rct2008.com:8443/10450935:3jZ73ZfO8Zgj85AAS9VzU5WP/sendTextMessage'
+    const apiUrl = getApiUrl(API_ENDPOINTS.IMPORT_MESSAGE);
     
-    // Get current date in ISO format for curdate field
-    const currentDate = new Date().toISOString()
+    // Get current date in Unix timestamp format
+    const currentDate = Math.floor(Date.now() / 1000)
     
-    // Generate a file message ID
-    const fileMsgId = `0`
-    
-    const messageText = `#sendmessage\ncurdate:${currentDate}\nfrom:${message.sender}\nto:${message.receiver}\ndateunix:${message.unixTimestamp}\nfilemsgid:${fileMsgId}\nmsg:${message.content}`
-    
-    // Encrypt the message text
-    const encryptedMessageText = encryptMsg(messageText)
+    // Prepare the request payload
+    const requestData = {
+      from: message.sender,
+      to: message.receiver,
+      data_unix: message.unixTimestamp,
+      cur_date: currentDate,
+      file_user_id: 0,
+      file_msg_id: 0,
+      msg: message.content
+    }
     
     logger.info(`[${requestId}] Prepared message payload`, { 
       unixTimestamp: message.unixTimestamp,
-      messageText,
-      encryptedMessageText,
+      currentDate,
+      requestData,
       contentLength: message.content.length
     });
-    
-    const requestData = {
-      chat_id: 777000,
-      chat_type: 1,
-      text: encryptedMessageText
-    }
     
     // Log request start time for performance tracking
     const startTime = Date.now();
@@ -80,38 +76,31 @@ export async function sendMessage(message: Message): Promise<SendMessageResult> 
       throw new Error(`API error: ${response.status} - ${response.statusText}`);
     }
     
-    // Parse the response to get the message_id
+    // Parse the response
     const responseData = await response.json();
     
+    // Check if the API call was successful
+    // The API returns { ok: true, data: 'success' } when successful
     if (!responseData.ok) {
-      logger.error(`[${requestId}] API returned non-OK status`, responseData);
-      throw new Error('API returned non-OK status');
+      logger.error(`[${requestId}] API returned non-success status`, responseData);
+      throw new Error('API returned non-success status');
     }
     
-    const sentMessageId = responseData.result.message_id;
+    // Generate a message ID for tracking purposes
+    // Since the API doesn't return a specific message ID
+    const sentMessageId = Date.now();
     
     logger.info(`[${requestId}] Message sent successfully`, { 
       status: response.status,
       duration,
       messageId: message.id,
-      sentMessageId
-    });
-    
-    // Verify message delivery using getUpdates API
-    logger.info(`[${requestId}] Verifying message delivery for sentMessageId: ${sentMessageId}`);
-    
-    // Wait a short time to allow the message to be processed
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const isVerified = await verifyMessage(sentMessageId);
-    
-    logger.info(`[${requestId}] Message verification result`, { 
       sentMessageId,
-      isVerified
+      responseData
     });
     
+    // No verification needed with the new API
     return {
-      success: isVerified,
+      success: true,
       sentMessageId
     };
   } catch (error) {

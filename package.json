@@ -5,8 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:test": "NODE_OPTIONS='--inspect' NODE_ENV=test next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "zip": "zip -r dist.zip .next package.json package-lock.json next.config.js .env.test .env"
   },
   "dependencies": {
     "crypto-js": "^4.2.0",
