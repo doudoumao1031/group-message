@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FaPlus, FaTrash, FaExchangeAlt, FaSpinner, FaCheck, FaTimes } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaExchangeAlt, FaSpinner, FaCheck, FaTimes, FaClock } from 'react-icons/fa'
 import { Message } from '@/types/message'
 import { validateUser } from '@/app/api/actions/validateUser'
+import { getLastDialogTimestamp } from '@/app/api/actions/getLastDialogTimestamp'
 
 interface MessageFormProps {
   onAddMessage: (message: Message) => void
@@ -21,9 +22,12 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
   // Validation states
   const [isSenderValid, setIsSenderValid] = useState<boolean | null>(null)
   const [isReceiverValid, setIsReceiverValid] = useState<boolean | null>(null)
+  const [isTimeValid, setIsTimeValid] = useState<boolean | null>(null)
   const [isValidatingSender, setIsValidatingSender] = useState(false)
   const [isValidatingReceiver, setIsValidatingReceiver] = useState(false)
+  const [isValidatingTime, setIsValidatingTime] = useState(false)
   const [validationError, setValidationError] = useState('')
+  const [lastTimestamp, setLastTimestamp] = useState<number | null>(null)
 
   // Set default time to current time
   useEffect(() => {
@@ -49,8 +53,16 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
       // Reset validation states when editing
       setIsSenderValid(null)
       setIsReceiverValid(null)
+      setIsTimeValid(null)
     }
   }, [editMessage])
+  
+  // Fetch last timestamp when both sender and receiver are valid
+  useEffect(() => {
+    if (isSenderValid && isReceiverValid && sender && receiver) {
+      validateTime(time);
+    }
+  }, [isSenderValid, isReceiverValid, sender, receiver]);
   
   // Validate sender when it changes
   const validateSender = async () => {
@@ -99,6 +111,48 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
       setIsValidatingReceiver(false)
     }
   }
+  
+  // Validate time against last dialog timestamp
+  const validateTime = async (timeValue: string) => {
+    if (!timeValue || !sender || !receiver) return
+    
+    // Only validate time if sender and receiver are valid
+    if (!isSenderValid || !isReceiverValid) return
+    
+    setIsValidatingTime(true)
+    setIsTimeValid(null)
+    
+    try {
+      // Get the last dialog timestamp
+      const timestamp = await getLastDialogTimestamp(sender, receiver)
+      setLastTimestamp(timestamp)
+      
+      // Calculate Unix timestamp for the input time
+      const inputTimestamp = Math.floor(new Date(timeValue).getTime() / 1000)
+      
+      // If there's no last timestamp, any time is valid
+      if (timestamp === null) {
+        setIsTimeValid(true)
+        return
+      }
+      
+      // Check if the input time is greater than the last timestamp
+      const isValid = inputTimestamp > timestamp
+      setIsTimeValid(isValid)
+      
+      if (!isValid) {
+        const lastDate = new Date(timestamp * 1000)
+        const formattedDate = lastDate.toLocaleString('zh-CN')
+        setValidationError(`消息时间必须晚于上一条消息时间 (${formattedDate})`)
+      } else {
+        setValidationError('')
+      }
+    } catch (error) {
+      console.error('Error validating time:', error)
+    } finally {
+      setIsValidatingTime(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -118,8 +172,18 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
       await validateReceiver()
     }
     
+    // Validate time if not already validated
+    if (isTimeValid === null && isSenderValid && isReceiverValid) {
+      await validateTime(time)
+    }
+    
     // Check if validation failed
     if (isSenderValid === false || isReceiverValid === false) {
+      return
+    }
+    
+    // Check if time validation failed
+    if (isTimeValid === false) {
       return
     }
     
@@ -157,6 +221,7 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
     
     // Reset validation states
     setValidationError('')
+    setIsTimeValid(null)
   }
 
   const handleSwapSenderReceiver = () => {
@@ -168,7 +233,23 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
     const tempSenderValid = isSenderValid;
     setIsSenderValid(isReceiverValid);
     setIsReceiverValid(tempSenderValid);
+    
+    // Reset time validation when swapping
+    setIsTimeValid(null);
+    setLastTimestamp(null);
   }
+  
+  // Handle time change
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTime = e.target.value;
+    setTime(newTime);
+    setIsTimeValid(null);
+    
+    // Validate time if sender and receiver are valid
+    if (isSenderValid && isReceiverValid) {
+      validateTime(newTime);
+    }
+  };
   
   // Get validation icon for input
   const getValidationIcon = (isValid: boolean | null, isValidating: boolean) => {
@@ -206,6 +287,7 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
               onChange={(e) => {
                 setSender(e.target.value)
                 setIsSenderValid(null)
+                setIsTimeValid(null)
               }}
               onBlur={validateSender}
               required
@@ -240,6 +322,7 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
               onChange={(e) => {
                 setReceiver(e.target.value)
                 setIsReceiverValid(null)
+                setIsTimeValid(null)
               }}
               onBlur={validateReceiver}
               required
@@ -255,14 +338,24 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
       
       <div className="hidden md:flex md:items-center">
         <label htmlFor="time-desktop" className="w-16 text-sm font-medium text-gray-700">时间:</label>
-        <input
-          type="datetime-local"
-          id="time-desktop"
-          className="form-control flex-1"
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-          required
-        />
+        <div className="relative flex-1">
+          <input
+            type="datetime-local"
+            id="time-desktop"
+            className={`form-control w-full pr-8 ${
+              isTimeValid === false ? 'border-red-300 focus:ring-red-500 focus:border-red-500' :
+              isTimeValid === true ? 'border-green-300 focus:ring-green-500 focus:border-green-500' : ''
+            }`}
+            value={time}
+            onChange={handleTimeChange}
+            required
+          />
+          {time && (
+            <span className="absolute right-2 top-2.5">
+              {getValidationIcon(isTimeValid, isValidatingTime)}
+            </span>
+          )}
+        </div>
       </div>
       
       <div className="hidden md:flex md:items-start">
@@ -292,6 +385,7 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
               onChange={(e) => {
                 setSender(e.target.value)
                 setIsSenderValid(null)
+                setIsTimeValid(null)
               }}
               onBlur={validateSender}
               required
@@ -328,6 +422,7 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
                 onChange={(e) => {
                   setReceiver(e.target.value)
                   setIsReceiverValid(null)
+                  setIsTimeValid(null)
                 }}
                 onBlur={validateReceiver}
                 required
@@ -343,14 +438,24 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
         
         <div>
           <label htmlFor="time-mobile" className="block text-xs font-medium text-gray-700 mb-1">时间:</label>
-          <input
-            type="datetime-local"
-            id="time-mobile"
-            className="form-control text-sm"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            required
-          />
+          <div className="relative">
+            <input
+              type="datetime-local"
+              id="time-mobile"
+              className={`form-control text-sm pr-8 ${
+                isTimeValid === false ? 'border-red-300 focus:ring-red-500 focus:border-red-500' :
+                isTimeValid === true ? 'border-green-300 focus:ring-green-500 focus:border-green-500' : ''
+              }`}
+              value={time}
+              onChange={handleTimeChange}
+              required
+            />
+            {time && (
+              <span className="absolute right-2 top-2.5">
+                {getValidationIcon(isTimeValid, isValidatingTime)}
+              </span>
+            )}
+          </div>
         </div>
         
         <div>
@@ -378,9 +483,9 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
         <button
           type="submit"
           className="btn btn-sm btn-success flex-1"
-          disabled={isValidatingSender || isValidatingReceiver}
+          disabled={isValidatingSender || isValidatingReceiver || isValidatingTime || isTimeValid === false}
         >
-          {(isValidatingSender || isValidatingReceiver) ? (
+          {(isValidatingSender || isValidatingReceiver || isValidatingTime) ? (
             <FaSpinner size={12} className="mr-1 animate-spin" />
           ) : (
             <FaPlus size={12} className="mr-1" />
