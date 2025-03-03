@@ -167,8 +167,39 @@ export default function Home() {
             msg.id === message.id ? message : msg
           )
         } else {
-          // Add new message
-          return [...prev, message]
+          // Add new message and sort by timestamp for the same sender-receiver pair
+          const newMessages = [...prev, message]
+          
+          // Group messages by sender-receiver pairs
+          const messageGroups: Record<string, Message[]> = {}
+          
+          newMessages.forEach(msg => {
+            const key = `${msg.sender}-${msg.receiver}`
+            if (!messageGroups[key]) {
+              messageGroups[key] = []
+            }
+            messageGroups[key].push(msg)
+          })
+          
+          // Sort each group by timestamp (ascending order)
+          Object.keys(messageGroups).forEach(key => {
+            messageGroups[key].sort((a, b) => a.unixTimestamp - b.unixTimestamp)
+          })
+          
+          // Flatten the groups back into a single array, preserving the original order
+          // but ensuring chronological order within each sender-receiver group
+          const sortedMessages: Message[] = []
+          const processedGroups = new Set<string>()
+          
+          newMessages.forEach(msg => {
+            const key = `${msg.sender}-${msg.receiver}`
+            if (!processedGroups.has(key)) {
+              sortedMessages.push(...messageGroups[key])
+              processedGroups.add(key)
+            }
+          })
+          
+          return sortedMessages
         }
       })
     })
