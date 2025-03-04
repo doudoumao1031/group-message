@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { FaPlus, FaUndo, FaExchangeAlt, FaSpinner, FaCheck, FaTimes, FaClock } from 'react-icons/fa'
+import { useState, useEffect, useRef } from 'react'
+import { FaPlus, FaUndo, FaExchangeAlt, FaSpinner, FaCheck, FaTimes, FaClock, FaCalendarAlt } from 'react-icons/fa'
 import { Message } from '@/types/message'
 import { validateUser } from '@/app/api/actions/validateUser'
 import { getLastDialogTimestamp } from '@/app/api/actions/getLastDialogTimestamp'
@@ -154,6 +154,81 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
     }
   }
 
+  // Format time for display
+  const formatTimeForDisplay = (timeString: string) => {
+    if (!timeString) return '';
+    
+    try {
+      const date = new Date(timeString);
+      if (isNaN(date.getTime())) return timeString;
+      
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      
+      return `${year}-${month}-${day} ${hours}:${minutes}`;
+    } catch (error) {
+      return timeString;
+    }
+  };
+  
+  // Parse display time to ISO format
+  const parseTimeToISO = (displayTime: string) => {
+    if (!displayTime) return '';
+    
+    try {
+      // Handle different formats
+      let date;
+      
+      // Try to parse as is
+      date = new Date(displayTime);
+      
+      // If invalid, try to parse as "YYYY-MM-DD HH:MM" format
+      if (isNaN(date.getTime())) {
+        const parts = displayTime.split(' ');
+        if (parts.length === 2) {
+          const [datePart, timePart] = parts;
+          date = new Date(`${datePart}T${timePart}`);
+        }
+      }
+      
+      if (isNaN(date.getTime())) {
+        return displayTime;
+      }
+      
+      return date.toISOString().slice(0, 16);
+    } catch (error) {
+      return displayTime;
+    }
+  };
+
+  // Handle time change
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTime = e.target.value;
+    setTime(newTime);
+    setIsTimeValid(null);
+    
+    // Validate time if sender and receiver are valid
+    if (isSenderValid && isReceiverValid) {
+      validateTime(newTime);
+    }
+  };
+  
+  // Handle manual time input
+  const handleManualTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const displayTime = e.target.value;
+    const isoTime = parseTimeToISO(displayTime);
+    setTime(isoTime);
+    setIsTimeValid(null);
+    
+    // Validate time if sender and receiver are valid
+    if (isSenderValid && isReceiverValid && isoTime) {
+      validateTime(isoTime);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -250,18 +325,6 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
     setLastTimestamp(null);
   }
   
-  // Handle time change
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = e.target.value;
-    setTime(newTime);
-    setIsTimeValid(null);
-    
-    // Validate time if sender and receiver are valid
-    if (isSenderValid && isReceiverValid) {
-      validateTime(newTime);
-    }
-  };
-  
   // Get validation icon for input
   const getValidationIcon = (isValid: boolean | null, isValidating: boolean) => {
     if (isValidating) {
@@ -350,22 +413,44 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
       <div className="hidden md:flex md:items-center">
         <label htmlFor="time-desktop" className="w-16 text-sm font-medium text-gray-700">时间:</label>
         <div className="relative flex-1">
-          <input
-            type="datetime-local"
-            id="time-desktop"
-            className={`form-control w-full pr-8 ${
-              isTimeValid === false ? 'border-red-300 focus:ring-red-500 focus:border-red-500' :
-              isTimeValid === true ? 'border-green-300 focus:ring-green-500 focus:border-green-500' : ''
-            }`}
-            value={time}
-            onChange={handleTimeChange}
-            required
-          />
-          {time && (
-            <span className="absolute right-2 top-2.5">
-              {getValidationIcon(isTimeValid, isValidatingTime)}
-            </span>
-          )}
+          <div className="flex">
+            <input
+              type="text"
+              id="time-display-desktop"
+              className={`form-control w-full pr-16 ${
+                isTimeValid === false ? 'border-red-300 focus:ring-red-500 focus:border-red-500' :
+                isTimeValid === true ? 'border-green-300 focus:ring-green-500 focus:border-green-500' : ''
+              }`}
+              value={formatTimeForDisplay(time)}
+              onChange={handleManualTimeChange}
+              placeholder="YYYY-MM-DD HH:MM"
+              required
+            />
+            <input
+              type="datetime-local"
+              id="time-desktop"
+              className="sr-only"
+              value={time}
+              onChange={handleTimeChange}
+            />
+            <div className="absolute right-0 top-0 flex items-center h-full pr-2">
+              {time && (
+                <span className="mr-2">
+                  {getValidationIcon(isTimeValid, isValidatingTime)}
+                </span>
+              )}
+              <button
+                type="button"
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => {
+                  const element = document.getElementById('time-desktop') as HTMLInputElement;
+                  element?.showPicker();
+                }}
+              >
+                <FaCalendarAlt size={14} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -450,22 +535,44 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
         <div>
           <label htmlFor="time-mobile" className="block text-xs font-medium text-gray-700 mb-0.5">时间:</label>
           <div className="relative">
-            <input
-              type="datetime-local"
-              id="time-mobile"
-              className={`form-control text-xs py-1.5 pr-6 ${
-                isTimeValid === false ? 'border-red-300 focus:ring-red-500 focus:border-red-500' :
-                isTimeValid === true ? 'border-green-300 focus:ring-green-500 focus:border-green-500' : ''
-              }`}
-              value={time}
-              onChange={handleTimeChange}
-              required
-            />
-            {time && (
-              <span className="absolute right-1.5 top-2">
-                {getValidationIcon(isTimeValid, isValidatingTime)}
-              </span>
-            )}
+            <div className="flex">
+              <input
+                type="text"
+                id="time-display-mobile"
+                className={`form-control text-xs py-1.5 pr-14 ${
+                  isTimeValid === false ? 'border-red-300 focus:ring-red-500 focus:border-red-500' :
+                  isTimeValid === true ? 'border-green-300 focus:ring-green-500 focus:border-green-500' : ''
+                }`}
+                value={formatTimeForDisplay(time)}
+                onChange={handleManualTimeChange}
+                placeholder="YYYY-MM-DD HH:MM"
+                required
+              />
+              <input
+                type="datetime-local"
+                id="time-mobile"
+                className="sr-only"
+                value={time}
+                onChange={handleTimeChange}
+              />
+              <div className="absolute right-0 top-0 flex items-center h-full pr-1.5">
+                {time && (
+                  <span className="mr-1.5">
+                    {getValidationIcon(isTimeValid, isValidatingTime)}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="text-gray-500 hover:text-gray-700"
+                  onClick={() => {
+                    const element = document.getElementById('time-mobile') as HTMLInputElement;
+                    element?.showPicker();
+                  }}
+                >
+                  <FaCalendarAlt size={12} />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         
