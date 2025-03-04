@@ -14,14 +14,14 @@
   [type='button'],
   [type='reset'],
   [type='submit'] {
-    min-height: 36px;
-    min-width: 36px;
+    min-height: 28px;
+    min-width: 28px;
   }
   
   input,
   select,
   textarea {
-    font-size: 1rem; /* Larger font size for better readability */
+    font-size: 0.875rem;
   }
 }
 
@@ -41,7 +41,7 @@
   /* Mobile-specific button styles */
   @media (max-width: 768px) {
     .btn-xs {
-      padding: 0.25rem 0.5rem;
+      @apply px-1.5 py-0.5 text-[10px];
     }
   }
   
@@ -76,8 +76,7 @@
   /* Mobile-specific form control styles */
   @media (max-width: 768px) {
     .form-control {
-      padding-top: 0.625rem;
-      padding-bottom: 0.625rem;
+      @apply px-2 py-1.5 text-xs;
     }
   }
   
@@ -87,6 +86,13 @@
   
   .message-status {
     @apply inline-block px-2 py-0.5 text-xs font-medium rounded-full;
+  }
+  
+  /* Mobile-specific status badge styles */
+  @media (max-width: 768px) {
+    .message-status {
+      @apply px-1.5 py-0.5 text-[10px];
+    }
   }
   
   .message-status-pending {
@@ -125,8 +131,23 @@
   /* Mobile-specific modal styles */
   @media (max-width: 768px) {
     .modal-container {
-      margin-left: 1rem;
-      margin-right: 1rem;
+      @apply mx-2 p-3;
+    }
+    
+    .modal-header {
+      @apply mb-2;
+    }
+    
+    .modal-title {
+      @apply text-base;
+    }
+    
+    .modal-body {
+      @apply mb-3 text-sm;
+    }
+    
+    .modal-footer {
+      @apply gap-2;
     }
   }
   
@@ -151,6 +172,20 @@
     @apply bg-white border rounded-md shadow-sm p-3 mb-2;
   }
   
+  @media (max-width: 768px) {
+    .mobile-card {
+      @apply p-1.5 mb-1;
+    }
+    
+    .mobile-card-header {
+      @apply mb-1;
+    }
+    
+    .mobile-card-body {
+      @apply text-xs;
+    }
+  }
+  
   .mobile-card-header {
     @apply flex justify-between items-center mb-2;
   }
@@ -162,6 +197,16 @@
   /* Dropdown menu for mobile */
   .mobile-dropdown {
     @apply absolute right-0 top-full mt-1 bg-white shadow-lg rounded-md z-10 py-1 min-w-[120px];
+  }
+  
+  @media (max-width: 768px) {
+    .mobile-dropdown {
+      @apply mt-0.5 py-0.5 min-w-[100px];
+    }
+    
+    .mobile-dropdown-item {
+      @apply px-2 py-1 text-[10px];
+    }
   }
   
   .mobile-dropdown-item {

@@ -6,7 +6,7 @@ import MessageForm from '@/components/MessageForm'
 import MessageList from '@/components/MessageList'
 import ClientComponent from '@/components/ClientComponent'
 import { Message } from '@/types/message'
-import { FaSignOutAlt, FaTrashAlt, FaExclamationTriangle, FaPaperPlane, FaQuestion } from 'react-icons/fa'
+import { FaSignOutAlt, FaTrashAlt, FaExclamationTriangle, FaPaperPlane, FaQuestion, FaFileImport, FaFileExport } from 'react-icons/fa'
 import { sendMessage } from './api/actions/sendMessage'
 
 // Modal types
@@ -456,12 +456,12 @@ export default function Home() {
       {!isLoggedIn ? (
         <LoginForm onLoginSuccess={handleLoginSuccess} />
       ) : (
-        <div className="container mx-auto px-2 py-3 max-w-5xl">
-          <div className="flex justify-between items-center mb-2">
+        <div className="container mx-auto px-1 md:px-2 py-2 md:py-3 max-w-5xl">
+          <div className="flex justify-between items-center mb-1 md:mb-2">
             <div className="flex items-center">
-              <h1 className="text-xl font-bold text-gray-800">消息发送系统</h1>
+              <h1 className="text-lg md:text-xl font-bold text-gray-800">消息发送系统</h1>
               {process.env.NODE_ENV === 'development' && (
-                <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                <span className="ml-1 md:ml-2 px-1 md:px-2 py-0.5 bg-yellow-100 text-yellow-800 text-[10px] md:text-xs rounded-full">
                   开发环境
                 </span>
               )}
@@ -469,22 +469,22 @@ export default function Home() {
             
             <button
               onClick={handleLogout}
-              className="btn btn-xs btn-outline-danger"
+              className="btn btn-xs btn-outline-danger py-0.5 px-1.5 md:py-1 md:px-2"
             >
-              <FaSignOutAlt className="mr-1" size={10} />
+              <FaSignOutAlt className="mr-0.5 md:mr-1" size={10} />
               退出
             </button>
           </div>
           
           {isSending && (
-            <div className="bg-blue-50 text-blue-700 p-2 rounded mb-2 text-sm">
-              <div className="flex justify-between mb-1">
+            <div className="bg-blue-50 text-blue-700 p-1 md:p-2 rounded mb-1 md:mb-2 text-xs md:text-sm">
+              <div className="flex justify-between mb-0.5 md:mb-1">
                 <span>正在发送消息...</span>
                 <span>{sendProgress.current} / {sendProgress.total}</span>
               </div>
-              <div className="w-full bg-blue-200 rounded-full h-1.5">
+              <div className="w-full bg-blue-200 rounded-full h-1 md:h-1.5">
                 <div 
-                  className="bg-blue-600 h-1.5 rounded-full" 
+                  className="bg-blue-600 h-1 md:h-1.5 rounded-full" 
                   style={{ width: `${(sendProgress.current / sendProgress.total) * 100}%` }}
                 ></div>
               </div>
@@ -492,11 +492,11 @@ export default function Home() {
           )}
           
           {/* Message Form Section */}
-          <div className="bg-white rounded shadow-sm p-3 mb-2">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-base font-semibold">创建消息</h2>
+          <div className="bg-white rounded shadow-sm p-2 md:p-3 mb-1 md:mb-2">
+            <div className="flex justify-between items-center mb-1 md:mb-2">
+              <h2 className="text-sm md:text-base font-semibold">创建消息</h2>
               {editMessage && (
-                <span className="text-xs text-blue-600">编辑模式</span>
+                <span className="text-[10px] md:text-xs text-blue-600">编辑模式</span>
               )}
             </div>
             <MessageForm 
@@ -507,24 +507,94 @@ export default function Home() {
           </div>
           
           {/* Message List Section */}
-          <div className="bg-white rounded shadow-sm p-3">
-            <div className="flex flex-wrap justify-between items-center mb-2 gap-2">
-              <h2 className="text-base font-semibold">消息列表</h2>
+          <div className="bg-white rounded shadow-sm p-2 md:p-3">
+            <div className="flex flex-wrap justify-between items-center mb-1 md:mb-2 gap-1 md:gap-2">
+              <h2 className="text-sm md:text-base font-semibold">消息列表</h2>
               <div className="flex flex-wrap gap-1">
+                <label className="btn btn-xs btn-secondary flex items-center py-0.5 px-1.5">
+                  <FaFileImport className="mr-0.25" size={8} />
+                  导入JSON
+                  <input 
+                    type="file" 
+                    accept=".json" 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      
+                      const reader = new FileReader()
+                      reader.onload = (event) => {
+                        try {
+                          const importedMessages = JSON.parse(event.target?.result as string)
+                          
+                          if (Array.isArray(importedMessages)) {
+                            // Validate imported messages
+                            const validMessages = importedMessages.filter(msg => 
+                              msg.id && msg.sender && msg.receiver && msg.time && msg.content
+                            )
+                            
+                            if (validMessages.length > 0) {
+                              startTransition(() => {
+                                setMessages(validMessages)
+                              })
+                              alert(`成功导入 ${validMessages.length} 条消息`)
+                            } else {
+                              alert('导入的文件不包含有效的消息数据')
+                            }
+                          } else {
+                            alert('导入的文件格式不正确')
+                          }
+                        } catch (error) {
+                          alert('导入失败：文件格式错误')
+                          console.error('Import error:', error)
+                        }
+                      }
+                      
+                      reader.readAsText(file)
+                      
+                      // Reset file input
+                      e.target.value = ''
+                    }}
+                    className="hidden" 
+                  />
+                </label>
                 <button 
-                  onClick={handleShowClearModal}
-                  className="btn btn-xs btn-outline-danger"
+                  onClick={() => {
+                    if (messages.length === 0) {
+                      alert('没有消息可导出')
+                      return
+                    }
+                    
+                    const dataStr = JSON.stringify(messages, null, 2)
+                    const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`
+                    
+                    const exportFileName = `messages_${new Date().toISOString().slice(0, 10)}.json`
+                    
+                    const linkElement = document.createElement('a')
+                    linkElement.setAttribute('href', dataUri)
+                    linkElement.setAttribute('download', exportFileName)
+                    linkElement.click()
+                  }}
+                  className="btn btn-xs btn-secondary py-0.5 px-1.5"
                   disabled={messages.length === 0}
                 >
-                  <FaTrashAlt className="mr-1" size={10} />
+                  <FaFileExport className="mr-0.25" size={8} />
+                  导出JSON
+                </button>
+                <button 
+                  onClick={handleShowClearModal}
+                  className="btn btn-xs btn-outline-danger py-0.5 px-1.5"
+                  disabled={messages.length === 0}
+                >
+                  <FaTrashAlt className="mr-0.25" size={8} />
                   清空
                 </button>
                 <button 
                   onClick={handleShowSendAllModal}
-                  className="btn btn-xs btn-primary"
+                  className="btn btn-xs btn-primary py-0.5 px-1.5"
                   disabled={isSending || messages.length === 0}
                 >
-                  发送所有消息
+                  <FaPaperPlane className="mr-0.25" size={8} />
+                  发送全部
                 </button>
               </div>
             </div>

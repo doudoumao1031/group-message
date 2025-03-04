@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { FaEdit, FaTrash, FaPaperPlane, FaEllipsisV, FaFileImport, FaFileExport } from 'react-icons/fa'
+import { FaEdit, FaTrash, FaPaperPlane, FaEllipsisV } from 'react-icons/fa'
 import { Message } from '@/types/message'
 
 interface MessageListProps {
@@ -88,27 +88,6 @@ export default function MessageList({
 
   return (
     <div>
-      {/* Import/Export buttons */}
-      <div className="flex justify-end mb-2 gap-1">
-        <label className="btn btn-xs btn-secondary flex items-center">
-          <FaFileImport className="mr-1" size={10} />
-          导入JSON
-          <input 
-            type="file" 
-            accept=".json" 
-            onChange={onImportMessages} 
-            className="hidden" 
-          />
-        </label>
-        <button 
-          onClick={onExportMessages}
-          className="btn btn-xs btn-secondary flex items-center"
-          disabled={messages.length === 0}
-        >
-          <FaFileExport className="mr-1" size={10} />
-          导出JSON
-        </button>
-      </div>
       
       {messages.length > 0 ? (
         <>
@@ -161,14 +140,14 @@ export default function MessageList({
                           title="编辑"
                           disabled={message.status === 'sent'}
                         >
-                          <FaEdit size={10} />
+                          <FaEdit size={14} />
                         </button>
                         <button
                           onClick={() => onDeleteMessage(message.id)}
                           className="text-red-600 hover:text-red-800"
                           title="删除"
                         >
-                          <FaTrash size={10} />
+                          <FaTrash size={14} />
                         </button>
                         <button
                           onClick={() => onSendMessage(message.id)}
@@ -176,7 +155,7 @@ export default function MessageList({
                           title="发送"
                           disabled={message.status === 'sent'}
                         >
-                          <FaPaperPlane size={10} />
+                          <FaPaperPlane size={14} />
                         </button>
                       </div>
                     </td>
@@ -187,29 +166,29 @@ export default function MessageList({
           </div>
           
           {/* Mobile view - card list */}
-          <div className="md:hidden space-y-3">
-            <div className="flex justify-between items-center px-2 py-1 bg-gray-100 rounded">
+          <div className="md:hidden space-y-1">
+            <div className="flex justify-between items-center px-1.5 py-0.5 bg-gray-100 rounded text-xs">
               <div className="flex items-center">
                 <input
                   type="checkbox"
                   checked={selectedIds.length === messages.length && messages.length > 0}
                   onChange={toggleSelectAll}
-                  className="rounded h-3 w-3 mr-2"
+                  className="rounded h-3 w-3 mr-1"
                 />
                 <span className="text-xs font-medium">全选</span>
               </div>
-              <span className="text-xs text-gray-500">共 {messages.length} 条消息</span>
+              <span className="text-xs text-gray-500">{messages.length}条</span>
             </div>
             
             {messages.map(message => (
-              <div key={message.id} className="bg-white border rounded shadow-sm p-2 text-xs relative">
-                <div className="flex justify-between items-start mb-1">
+              <div key={message.id} className="bg-white border rounded shadow-sm p-1.5 text-xs relative">
+                <div className="flex justify-between items-start mb-0.5">
                   <div className="flex items-center">
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(message.id)}
                       onChange={() => toggleSelection(message.id)}
-                      className="rounded h-3 w-3 mr-2"
+                      className="rounded h-3 w-3 mr-1"
                     />
                     <span className={getStatusBadgeClass(message.status)}>
                       {getStatusText(message.status, message.errorMessage)}
@@ -219,22 +198,22 @@ export default function MessageList({
                   <div className="relative">
                     <button 
                       onClick={() => toggleDropdown(message.id)}
-                      className="p-1 rounded-full hover:bg-gray-100"
+                      className="p-0.5 rounded-full hover:bg-gray-100"
                     >
                       <FaEllipsisV size={10} />
                     </button>
                     
                     {activeDropdown === message.id && (
-                      <div className="absolute right-0 top-full mt-1 bg-white shadow-lg rounded z-10 py-1 w-24">
+                      <div className="absolute right-0 top-full mt-0.5 bg-white shadow-lg rounded z-10 py-0.5 w-20">
                         <button
                           onClick={() => {
                             onEditMessage(message);
                             setActiveDropdown(null);
                           }}
-                          className="w-full text-left px-3 py-1 text-xs hover:bg-gray-100 flex items-center"
+                          className="w-full text-left px-2 py-0.5 text-xs hover:bg-gray-100 flex items-center"
                           disabled={message.status === 'sent'}
                         >
-                          <FaEdit size={10} className="mr-2 text-blue-600" />
+                          <FaEdit size={12} className="mr-1 text-blue-600" />
                           编辑
                         </button>
                         <button
@@ -242,9 +221,9 @@ export default function MessageList({
                             onDeleteMessage(message.id);
                             setActiveDropdown(null);
                           }}
-                          className="w-full text-left px-3 py-1 text-xs hover:bg-gray-100 flex items-center"
+                          className="w-full text-left px-2 py-0.5 text-xs hover:bg-gray-100 flex items-center"
                         >
-                          <FaTrash size={10} className="mr-2 text-red-600" />
+                          <FaTrash size={12} className="mr-1 text-red-600" />
                           删除
                         </button>
                         <button
@@ -252,10 +231,10 @@ export default function MessageList({
                             onSendMessage(message.id);
                             setActiveDropdown(null);
                           }}
-                          className="w-full text-left px-3 py-1 text-xs hover:bg-gray-100 flex items-center"
+                          className="w-full text-left px-2 py-0.5 text-xs hover:bg-gray-100 flex items-center"
                           disabled={message.status === 'sent'}
                         >
-                          <FaPaperPlane size={10} className="mr-2 text-green-600" />
+                          <FaPaperPlane size={12} className="mr-1 text-green-600" />
                           发送
                         </button>
                       </div>
@@ -263,23 +242,23 @@ export default function MessageList({
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-x-2 gap-y-1 mb-1">
+                <div className="grid grid-cols-2 gap-x-1 gap-y-0.5 mb-0.5 text-[10px]">
                   <div className="flex">
-                    <span className="font-medium w-14">发送者:</span>
+                    <span className="font-medium w-10">发送者:</span>
                     <span className="truncate">{message.sender}</span>
                   </div>
                   <div className="flex">
-                    <span className="font-medium w-14">接收者:</span>
+                    <span className="font-medium w-10">接收者:</span>
                     <span className="truncate">{message.receiver}</span>
                   </div>
                   <div className="flex col-span-2">
-                    <span className="font-medium w-14">时间:</span>
+                    <span className="font-medium w-10">时间:</span>
                     <span>{formatDateTime(message.time)}</span>
                   </div>
                 </div>
                 
-                <div className="flex">
-                  <span className="font-medium w-14">内容:</span>
+                <div className="flex text-[10px]">
+                  <span className="font-medium w-10">内容:</span>
                   <span className="truncate">{message.content}</span>
                 </div>
               </div>

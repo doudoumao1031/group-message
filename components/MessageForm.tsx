@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FaPlus, FaTrash, FaExchangeAlt, FaSpinner, FaCheck, FaTimes, FaClock } from 'react-icons/fa'
+import { FaPlus, FaUndo, FaExchangeAlt, FaSpinner, FaCheck, FaTimes, FaClock } from 'react-icons/fa'
 import { Message } from '@/types/message'
 import { validateUser } from '@/app/api/actions/validateUser'
 import { getLastDialogTimestamp } from '@/app/api/actions/getLastDialogTimestamp'
@@ -211,17 +211,28 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
   }
 
   const clearForm = () => {
-    // Don't reset sender and receiver anymore
-    // setSender('')
-    // setReceiver('')
-    // Don't reset time to keep the current time
+    // Reset sender and receiver
+    setSender('')
+    setReceiver('')
+    // Reset time to current time
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    const hours = String(now.getHours()).padStart(2, '0')
+    const minutes = String(now.getMinutes()).padStart(2, '0')
+    
+    setTime(`${year}-${month}-${day}T${hours}:${minutes}`)
     setContent('')
     setIsEditing(false)
     onCancelEdit()
     
     // Reset validation states
     setValidationError('')
+    setIsSenderValid(null)
+    setIsReceiverValid(null)
     setIsTimeValid(null)
+    setLastTimestamp(null)
   }
 
   const handleSwapSenderReceiver = () => {
@@ -370,51 +381,51 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
       </div>
       
       {/* Mobile layout */}
-      <div className="md:hidden space-y-2">
-        <div>
-          <label htmlFor="sender-mobile" className="block text-xs font-medium text-gray-700 mb-1">发送者:</label>
-          <div className="relative">
-            <input
-              type="text"
-              id="sender-mobile"
-              className={`form-control text-sm pr-8 ${
-                isSenderValid === false ? 'border-red-300 focus:ring-red-500 focus:border-red-500' :
-                isSenderValid === true ? 'border-green-300 focus:ring-green-500 focus:border-green-500' : ''
-              }`}
-              value={sender}
-              onChange={(e) => {
-                setSender(e.target.value)
-                setIsSenderValid(null)
-                setIsTimeValid(null)
-              }}
-              onBlur={validateSender}
-              required
-            />
-            {sender && (
-              <span className="absolute right-2 top-2.5">
-                {getValidationIcon(isSenderValid, isValidatingSender)}
-              </span>
-            )}
+      <div className="md:hidden space-y-1">
+        <div className="flex items-start gap-1">
+          <div className="flex-1">
+            <label htmlFor="sender-mobile" className="block text-xs font-medium text-gray-700 mb-0.5">发送者:</label>
+            <div className="relative">
+              <input
+                type="text"
+                id="sender-mobile"
+                className={`form-control text-xs py-1.5 pr-6 ${
+                  isSenderValid === false ? 'border-red-300 focus:ring-red-500 focus:border-red-500' :
+                  isSenderValid === true ? 'border-green-300 focus:ring-green-500 focus:border-green-500' : ''
+                }`}
+                value={sender}
+                onChange={(e) => {
+                  setSender(e.target.value)
+                  setIsSenderValid(null)
+                  setIsTimeValid(null)
+                }}
+                onBlur={validateSender}
+                required
+              />
+              {sender && (
+                <span className="absolute right-1.5 top-2">
+                  {getValidationIcon(isSenderValid, isValidatingSender)}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
+          
           <button
             type="button"
             onClick={handleSwapSenderReceiver}
-            className="btn btn-xs btn-outline-secondary"
+            className="btn btn-xs btn-outline-secondary h-7 w-7 p-0 mt-5"
             title="交换发送者/接收者"
           >
-            <FaExchangeAlt size={12} />
+            <FaExchangeAlt size={10} />
           </button>
           
           <div className="flex-1">
-            <label htmlFor="receiver-mobile" className="block text-xs font-medium text-gray-700 mb-1">接收者:</label>
+            <label htmlFor="receiver-mobile" className="block text-xs font-medium text-gray-700 mb-0.5">接收者:</label>
             <div className="relative">
               <input
                 type="text"
                 id="receiver-mobile"
-                className={`form-control text-sm pr-8 ${
+                className={`form-control text-xs py-1.5 pr-6 ${
                 isReceiverValid === false ? 'border-red-300 focus:ring-red-500 focus:border-red-500' :
                 isReceiverValid === true ? 'border-green-300 focus:ring-green-500 focus:border-green-500' : ''
               }`}
@@ -428,7 +439,7 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
                 required
               />
               {receiver && (
-                <span className="absolute right-2 top-2.5">
+                <span className="absolute right-1.5 top-2">
                   {getValidationIcon(isReceiverValid, isValidatingReceiver)}
                 </span>
               )}
@@ -437,12 +448,12 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
         </div>
         
         <div>
-          <label htmlFor="time-mobile" className="block text-xs font-medium text-gray-700 mb-1">时间:</label>
+          <label htmlFor="time-mobile" className="block text-xs font-medium text-gray-700 mb-0.5">时间:</label>
           <div className="relative">
             <input
               type="datetime-local"
               id="time-mobile"
-              className={`form-control text-sm pr-8 ${
+              className={`form-control text-xs py-1.5 pr-6 ${
                 isTimeValid === false ? 'border-red-300 focus:ring-red-500 focus:border-red-500' :
                 isTimeValid === true ? 'border-green-300 focus:ring-green-500 focus:border-green-500' : ''
               }`}
@@ -451,7 +462,7 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
               required
             />
             {time && (
-              <span className="absolute right-2 top-2.5">
+              <span className="absolute right-1.5 top-2">
                 {getValidationIcon(isTimeValid, isValidatingTime)}
               </span>
             )}
@@ -459,10 +470,10 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
         </div>
         
         <div>
-          <label htmlFor="content-mobile" className="block text-xs font-medium text-gray-700 mb-1">内容:</label>
+          <label htmlFor="content-mobile" className="block text-xs font-medium text-gray-700 mb-0.5">内容:</label>
           <textarea
             id="content-mobile"
-            className="form-control text-sm min-h-[60px]"
+            className="form-control text-xs py-1.5 min-h-[50px]"
             value={content}
             onChange={(e) => setContent(e.target.value)}
             required
@@ -470,25 +481,25 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
         </div>
       </div>
       
-      <div className="flex gap-2 pt-1">
+      <div className="flex gap-1 pt-1">
         <button
           type="button"
           onClick={clearForm}
-          className="btn btn-sm btn-secondary flex-1"
+          className="btn btn-xs btn-secondary flex-1 py-1"
         >
-          <FaTrash size={12} className="mr-1" />
-          清空
+          <FaUndo size={10} className="mr-0.25" />
+          重置
         </button>
         
         <button
           type="submit"
-          className="btn btn-sm btn-success flex-1"
+          className="btn btn-xs btn-success flex-1 py-1"
           disabled={isValidatingSender || isValidatingReceiver || isValidatingTime || isTimeValid === false}
         >
           {(isValidatingSender || isValidatingReceiver || isValidatingTime) ? (
-            <FaSpinner size={12} className="mr-1 animate-spin" />
+            <FaSpinner size={10} className="mr-0.25 animate-spin" />
           ) : (
-            <FaPlus size={12} className="mr-1" />
+            <FaPlus size={10} className="mr-0.25" />
           )}
           {isEditing ? '更新' : '添加'}
         </button>
