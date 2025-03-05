@@ -5,6 +5,9 @@ import { FaPlus, FaUndo, FaExchangeAlt, FaSpinner, FaCheck, FaTimes, FaClock, Fa
 import { Message } from '@/types/message'
 import { validateUser } from '@/app/api/actions/validateUser'
 import { getLastDialogTimestamp } from '@/app/api/actions/getLastDialogTimestamp'
+import { DatePicker, ConfigProvider } from 'antd'
+import zhCN from 'antd/lib/locale/zh_CN'
+import dayjs from 'dayjs';
 
 interface MessageFormProps {
   onAddMessage: (message: Message) => void
@@ -179,18 +182,16 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
     if (!displayTime) return '';
     
     try {
-      // Handle different formats
-      let date;
+      let date = new Date(displayTime);
       
-      // Try to parse as is
-      date = new Date(displayTime);
-      
-      // If invalid, try to parse as "YYYY-MM-DD HH:MM" format
+      // Try to parse YYYY-MM-DD HH:MM format
       if (isNaN(date.getTime())) {
-        const parts = displayTime.split(' ');
-        if (parts.length === 2) {
-          const [datePart, timePart] = parts;
-          date = new Date(`${datePart}T${timePart}`);
+        const pattern = /(\d{4})-(\d{1,2})-(\d{1,2})\s*(\d{1,2}):(\d{1,2})/;
+        const match = displayTime.match(pattern);
+        
+        if (match) {
+          const [_, year, month, day, hour, minute] = match;
+          date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`);
         }
       }
       
@@ -204,18 +205,24 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
     }
   };
 
-  // Handle time change
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = e.target.value;
-    setTime(newTime);
-    setIsTimeValid(null);
-    
-    // Validate time if sender and receiver are valid
-    if (isSenderValid && isReceiverValid) {
-      validateTime(newTime);
+  // Handle DatePicker change
+  const handleDatePickerChange = (value: dayjs.Dayjs | null, dateString: string) => {
+    if (value) {
+      // Convert to ISO format
+      const isoTime = value.toISOString().slice(0, 16);
+      setTime(isoTime);
+      setIsTimeValid(null);
+      
+      // Validate time if sender and receiver are valid
+      if (isSenderValid && isReceiverValid) {
+        validateTime(isoTime);
+      }
+    } else {
+      setTime('');
+      setIsTimeValid(null);
     }
   };
-  
+
   // Handle manual time input
   const handleManualTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const displayTime = e.target.value;
@@ -413,44 +420,29 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
       <div className="hidden md:flex md:items-center">
         <label htmlFor="time-desktop" className="w-16 text-sm font-medium text-gray-700">时间:</label>
         <div className="relative flex-1">
-          <div className="flex">
-            <input
-              type="text"
-              id="time-display-desktop"
-              className={`form-control w-full pr-16 ${
-                isTimeValid === false ? 'border-red-300 focus:ring-red-500 focus:border-red-500' :
-                isTimeValid === true ? 'border-green-300 focus:ring-green-500 focus:border-green-500' : ''
+          <ConfigProvider locale={zhCN}>
+            <DatePicker 
+              showTime={{ format: 'HH:mm' }}
+              format="YYYY-MM-DD HH:mm"
+              placeholder="选择日期和时间"
+              onChange={handleDatePickerChange}
+              className={`w-full p-2 border rounded ${
+                isTimeValid === false ? 'border-red-500' : 
+                isTimeValid === true ? 'border-green-500' : 'border-gray-300'
               }`}
-              value={formatTimeForDisplay(time)}
-              onChange={handleManualTimeChange}
-              placeholder="YYYY-MM-DD HH:MM"
-              required
+              status={isTimeValid === false ? 'error' : undefined}
+              value={time ? dayjs(time) : null}
             />
-            <input
-              type="datetime-local"
-              id="time-desktop"
-              className="sr-only"
-              value={time}
-              onChange={handleTimeChange}
-            />
-            <div className="absolute right-0 top-0 flex items-center h-full pr-2">
-              {time && (
-                <span className="mr-2">
-                  {getValidationIcon(isTimeValid, isValidatingTime)}
-                </span>
+          </ConfigProvider>
+          {isTimeValid !== null && (
+            <div className="absolute inset-y-0 right-0 flex items-center pr-10 pointer-events-none">
+              {isTimeValid ? (
+                <FaCheck className="text-green-500" />
+              ) : (
+                <FaTimes className="text-red-500" />
               )}
-              <button
-                type="button"
-                className="text-gray-500 hover:text-gray-700"
-                onClick={() => {
-                  const element = document.getElementById('time-desktop') as HTMLInputElement;
-                  element?.showPicker();
-                }}
-              >
-                <FaCalendarAlt size={14} />
-              </button>
             </div>
-          </div>
+          )}
         </div>
       </div>
       
@@ -535,44 +527,29 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
         <div>
           <label htmlFor="time-mobile" className="block text-xs font-medium text-gray-700 mb-0.5">时间:</label>
           <div className="relative">
-            <div className="flex">
-              <input
-                type="text"
-                id="time-display-mobile"
-                className={`form-control text-xs py-1.5 pr-14 ${
-                  isTimeValid === false ? 'border-red-300 focus:ring-red-500 focus:border-red-500' :
-                  isTimeValid === true ? 'border-green-300 focus:ring-green-500 focus:border-green-500' : ''
+            <ConfigProvider locale={zhCN}>
+              <DatePicker 
+                showTime={{ format: 'HH:mm' }}
+                format="YYYY-MM-DD HH:mm"
+                placeholder="选择日期和时间"
+                onChange={handleDatePickerChange}
+                className={`w-full p-2 border rounded ${
+                  isTimeValid === false ? 'border-red-500' : 
+                  isTimeValid === true ? 'border-green-500' : 'border-gray-300'
                 }`}
-                value={formatTimeForDisplay(time)}
-                onChange={handleManualTimeChange}
-                placeholder="YYYY-MM-DD HH:MM"
-                required
+                status={isTimeValid === false ? 'error' : undefined}
+                value={time ? dayjs(time) : null}
               />
-              <input
-                type="datetime-local"
-                id="time-mobile"
-                className="sr-only"
-                value={time}
-                onChange={handleTimeChange}
-              />
-              <div className="absolute right-0 top-0 flex items-center h-full pr-1.5">
-                {time && (
-                  <span className="mr-1.5">
-                    {getValidationIcon(isTimeValid, isValidatingTime)}
-                  </span>
+            </ConfigProvider>
+            {isTimeValid !== null && (
+              <div className="absolute inset-y-0 right-0 flex items-center pr-10 pointer-events-none">
+                {isTimeValid ? (
+                  <FaCheck className="text-green-500" />
+                ) : (
+                  <FaTimes className="text-red-500" />
                 )}
-                <button
-                  type="button"
-                  className="text-gray-500 hover:text-gray-700"
-                  onClick={() => {
-                    const element = document.getElementById('time-mobile') as HTMLInputElement;
-                    element?.showPicker();
-                  }}
-                >
-                  <FaCalendarAlt size={12} />
-                </button>
               </div>
-            </div>
+            )}
           </div>
         </div>
         
