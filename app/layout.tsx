@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import 'antd-mobile/bundle/style.css'
 
 export const metadata: Metadata = {
   title: '消息发送系统',

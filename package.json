@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "antd": "^5.24.2",
+    "antd-mobile": "^5.38.1",
     "crypto-js": "^4.2.0",
     "next": "15.0.0",
     "otplib": "^12.0.1",

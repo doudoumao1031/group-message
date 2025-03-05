@@ -151,7 +151,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
           </button>
           
           <div className="text-center mt-4 text-gray-500 text-xs">
-            v0.0.1
+            v{process.env.NEXT_PUBLIC_APP_VERSION || '0.0.1'}
           </div>
         </form>
       </div>

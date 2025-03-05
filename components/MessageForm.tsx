@@ -6,8 +6,10 @@ import { Message } from '@/types/message'
 import { validateUser } from '@/app/api/actions/validateUser'
 import { getLastDialogTimestamp } from '@/app/api/actions/getLastDialogTimestamp'
 import { DatePicker, ConfigProvider } from 'antd'
+import type { Dayjs } from 'dayjs'
+import dayjs from 'dayjs'
 import zhCN from 'antd/lib/locale/zh_CN'
-import dayjs from 'dayjs';
+import { Popup, DatePickerView } from 'antd-mobile'
 
 interface MessageFormProps {
   onAddMessage: (message: Message) => void
@@ -32,6 +34,10 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
   const [validationError, setValidationError] = useState('')
   const [lastTimestamp, setLastTimestamp] = useState<number | null>(null)
 
+  // State for mobile date picker
+  const [showMobilePicker, setShowMobilePicker] = useState(false);
+  const [tempDate, setTempDate] = useState<Date | null>(null);
+
   // Set default time to current time
   useEffect(() => {
     const now = new Date()
@@ -40,8 +46,9 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
     const day = String(now.getDate()).padStart(2, '0')
     const hours = String(now.getHours()).padStart(2, '0')
     const minutes = String(now.getMinutes()).padStart(2, '0')
+    const seconds = String(now.getSeconds()).padStart(2, '0')
     
-    setTime(`${year}-${month}-${day}T${hours}:${minutes}`)
+    setTime(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}`)
   }, [])
 
   // Handle edit message
@@ -117,43 +124,43 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
   
   // Validate time against last dialog timestamp
   const validateTime = async (timeValue: string) => {
-    if (!timeValue || !sender || !receiver) return
+    if (!timeValue || !sender || !receiver) return;
     
-    // Only validate time if sender and receiver are valid
-    if (!isSenderValid || !isReceiverValid) return
-    
-    setIsValidatingTime(true)
-    setIsTimeValid(null)
-    
+    setIsValidatingTime(true);
     try {
-      // Get the last dialog timestamp
-      const timestamp = await getLastDialogTimestamp(sender, receiver)
-      setLastTimestamp(timestamp)
+      const result = await getLastDialogTimestamp(sender, receiver);
       
-      // Calculate Unix timestamp for the input time
-      const inputTimestamp = Math.floor(new Date(timeValue).getTime() / 1000)
-      
-      // If there's no last timestamp, any time is valid
-      if (timestamp === null) {
-        setIsTimeValid(true)
-        return
-      }
-      
-      // Check if the input time is greater than the last timestamp
-      const isValid = inputTimestamp > timestamp
-      setIsTimeValid(isValid)
-      
-      if (!isValid) {
-        const lastDate = new Date(timestamp * 1000)
-        const formattedDate = lastDate.toLocaleString('zh-CN')
-        setValidationError(`消息时间必须晚于上一条消息时间 (${formattedDate})`)
+      if (result.error) {
+        // Display the error from the API
+        setIsTimeValid(false);
+        setValidationError(`验证时间失败: ${result.error}`);
+      } else if (result.timestamp !== null) {
+        // Convert both timestamps to milliseconds for comparison
+        const selectedTime = new Date(timeValue).getTime();
+        const lastDialogTime = new Date(result.timestamp).getTime();
+        
+        if (selectedTime <= lastDialogTime) {
+          setIsTimeValid(false);
+          // Format the last dialog time for display
+          const lastDate = new Date(result.timestamp);
+          const formattedLastDate = formatTimeForDisplay(lastDate.toISOString());
+          setValidationError(`时间必须晚于最后一条消息的时间: ${formattedLastDate}`);
+        } else {
+          setIsTimeValid(true);
+          setValidationError('');
+        }
       } else {
-        setValidationError('')
+        // If there's no last dialog, consider it valid
+        setIsTimeValid(true);
+        setValidationError('');
       }
     } catch (error) {
-      console.error('Error validating time:', error)
+      console.error('Error validating time:', error);
+      // In case of error, don't block the user
+      setIsTimeValid(true);
+      setValidationError('');
     } finally {
-      setIsValidatingTime(false)
+      setIsValidatingTime(false);
     }
   }
 
@@ -170,8 +177,9 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
       const day = String(date.getDate()).padStart(2, '0');
       const hours = String(date.getHours()).padStart(2, '0');
       const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
       
-      return `${year}-${month}-${day} ${hours}:${minutes}`;
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     } catch (error) {
       return timeString;
     }
@@ -184,14 +192,14 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
     try {
       let date = new Date(displayTime);
       
-      // Try to parse YYYY-MM-DD HH:MM format
+      // Try to parse YYYY-MM-DD HH:MM:SS format
       if (isNaN(date.getTime())) {
-        const pattern = /(\d{4})-(\d{1,2})-(\d{1,2})\s*(\d{1,2}):(\d{1,2})/;
+        const pattern = /(\d{4})-(\d{1,2})-(\d{1,2})\s*(\d{1,2}):(\d{1,2}):(\d{1,2})/;
         const match = displayTime.match(pattern);
         
         if (match) {
-          const [_, year, month, day, hour, minute] = match;
-          date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`);
+          const [_, year, month, day, hour, minute, second] = match;
+          date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:${second.padStart(2, '0')}`);
         }
       }
       
@@ -199,17 +207,31 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
         return displayTime;
       }
       
-      return date.toISOString().slice(0, 16);
+      return date.toISOString();
     } catch (error) {
       return displayTime;
     }
   };
 
   // Handle DatePicker change
-  const handleDatePickerChange = (value: dayjs.Dayjs | null, dateString: string) => {
+  const handleDatePickerChange = (value: Dayjs | null, dateString: string | string[]) => {
     if (value) {
-      // Convert to ISO format
-      const isoTime = value.toISOString().slice(0, 16);
+      // Convert to ISO format preserving local time
+      const year = value.year();
+      const month = value.month() + 1; // Dayjs months are 0-indexed
+      const day = value.date();
+      const hour = value.hour();
+      const minute = value.minute();
+      const second = value.second();
+      
+      // Format as YYYY-MM-DDTHH:MM:SS to preserve local time
+      const formattedMonth = month.toString().padStart(2, '0');
+      const formattedDay = day.toString().padStart(2, '0');
+      const formattedHour = hour.toString().padStart(2, '0');
+      const formattedMinute = minute.toString().padStart(2, '0');
+      const formattedSecond = second.toString().padStart(2, '0');
+      
+      const isoTime = `${year}-${formattedMonth}-${formattedDay}T${formattedHour}:${formattedMinute}:${formattedSecond}`;
       setTime(isoTime);
       setIsTimeValid(null);
       
@@ -234,6 +256,47 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
     if (isSenderValid && isReceiverValid && isoTime) {
       validateTime(isoTime);
     }
+  };
+
+  // Handle mobile date picker change
+  const handleMobileDatePickerChange = (value: Date) => {
+    setTempDate(value);
+  };
+
+  // Confirm mobile date selection
+  const confirmMobileDate = () => {
+    if (tempDate) {
+      // Convert to ISO format preserving local time
+      const year = tempDate.getFullYear();
+      const month = tempDate.getMonth() + 1; // getMonth() is 0-indexed
+      const day = tempDate.getDate();
+      const hour = tempDate.getHours();
+      const minute = tempDate.getMinutes();
+      const second = tempDate.getSeconds();
+      
+      // Format as YYYY-MM-DDTHH:MM:SS to preserve local time
+      const formattedMonth = month.toString().padStart(2, '0');
+      const formattedDay = day.toString().padStart(2, '0');
+      const formattedHour = hour.toString().padStart(2, '0');
+      const formattedMinute = minute.toString().padStart(2, '0');
+      const formattedSecond = second.toString().padStart(2, '0');
+      
+      const isoTime = `${year}-${formattedMonth}-${formattedDay}T${formattedHour}:${formattedMinute}:${formattedSecond}`;
+      setTime(isoTime);
+      setIsTimeValid(null);
+      
+      // Validate time if sender and receiver are valid
+      if (isSenderValid && isReceiverValid) {
+        validateTime(isoTime);
+      }
+    }
+    setShowMobilePicker(false);
+  };
+
+  // Open mobile date picker
+  const openMobileDatePicker = () => {
+    setTempDate(time ? new Date(time) : new Date());
+    setShowMobilePicker(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -303,8 +366,9 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
     const day = String(now.getDate()).padStart(2, '0')
     const hours = String(now.getHours()).padStart(2, '0')
     const minutes = String(now.getMinutes()).padStart(2, '0')
+    const seconds = String(now.getSeconds()).padStart(2, '0')
     
-    setTime(`${year}-${month}-${day}T${hours}:${minutes}`)
+    setTime(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}`)
     setContent('')
     setIsEditing(false)
     onCancelEdit()
@@ -422,8 +486,8 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
         <div className="relative flex-1">
           <ConfigProvider locale={zhCN}>
             <DatePicker 
-              showTime={{ format: 'HH:mm' }}
-              format="YYYY-MM-DD HH:mm"
+              showTime={{ format: 'HH:mm:ss' }}
+              format="YYYY-MM-DD HH:mm:ss"
               placeholder="选择日期和时间"
               onChange={handleDatePickerChange}
               className={`w-full p-2 border rounded ${
@@ -527,22 +591,29 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
         <div>
           <label htmlFor="time-mobile" className="block text-xs font-medium text-gray-700 mb-0.5">时间:</label>
           <div className="relative">
-            <ConfigProvider locale={zhCN}>
-              <DatePicker 
-                showTime={{ format: 'HH:mm' }}
-                format="YYYY-MM-DD HH:mm"
+            <div 
+              className={`w-full flex items-center text-xs py-1.5 px-2 border rounded ${
+                isTimeValid === false ? 'border-red-500' : 
+                isTimeValid === true ? 'border-green-500' : 'border-gray-300'
+              }`}
+              onClick={openMobileDatePicker}
+            >
+              <input
+                type="text"
+                className="flex-1 outline-none bg-transparent"
+                value={time ? formatTimeForDisplay(time) : ''}
+                readOnly
                 placeholder="选择日期和时间"
-                onChange={handleDatePickerChange}
-                className={`w-full p-2 border rounded ${
-                  isTimeValid === false ? 'border-red-500' : 
-                  isTimeValid === true ? 'border-green-500' : 'border-gray-300'
-                }`}
-                status={isTimeValid === false ? 'error' : undefined}
-                value={time ? dayjs(time) : null}
               />
-            </ConfigProvider>
+              <button
+                type="button"
+                className="ml-1 text-xs text-gray-500"
+              >
+                选择
+              </button>
+            </div>
             {isTimeValid !== null && (
-              <div className="absolute inset-y-0 right-0 flex items-center pr-10 pointer-events-none">
+              <div className="absolute inset-y-0 right-12 flex items-center pointer-events-none">
                 {isTimeValid ? (
                   <FaCheck className="text-green-500" />
                 ) : (
@@ -550,7 +621,43 @@ export default function MessageForm({ onAddMessage, editMessage, onCancelEdit }:
                 )}
               </div>
             )}
+            {validationError && (
+              <p className="text-red-500 text-xs italic mt-1">{validationError}</p>
+            )}
           </div>
+          
+          {/* Mobile DatePicker Popup */}
+          <Popup
+            visible={showMobilePicker}
+            onClose={() => setShowMobilePicker(false)}
+            position="bottom"
+            bodyStyle={{ height: '40vh' }}
+          >
+            <div className="p-2">
+              <div className="flex justify-between items-center mb-4">
+                <button 
+                  type="button" 
+                  className="px-3 py-1 text-gray-500"
+                  onClick={() => setShowMobilePicker(false)}
+                >
+                  取消
+                </button>
+                <div className="text-center font-medium">选择日期和时间</div>
+                <button 
+                  type="button" 
+                  className="px-3 py-1 text-blue-500 font-medium"
+                  onClick={confirmMobileDate}
+                >
+                  确定
+                </button>
+              </div>
+              <DatePickerView
+                precision="second"
+                value={tempDate || new Date()}
+                onChange={handleMobileDatePickerChange}
+              />
+            </div>
+          </Popup>
         </div>
         
         <div>
