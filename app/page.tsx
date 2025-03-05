@@ -1,5 +1,6 @@
-import { redirect } from 'next/navigation'
+import { redirect, notFound } from 'next/navigation'
 
 export default function Home() {
-  redirect('/import')
+  // This will trigger the not-found page
+  return ''
 }

@@ -149,6 +149,10 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
             <FaSignInAlt className="mr-2" />
             {isLoading ? '登录中...' : '登录'}
           </button>
+          
+          <div className="text-center mt-4 text-gray-500 text-xs">
+            v0.0.1
+          </div>
         </form>
       </div>
     </div>
